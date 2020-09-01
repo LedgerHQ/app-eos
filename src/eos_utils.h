@@ -20,6 +20,7 @@
 
 #include <stdbool.h>
 #include <stdint.h>
+#include "libcxng.h"
 
 bool b58enc(uint8_t *data, uint32_t binsz, char *b58, uint32_t *b58sz);
 

@@ -19,6 +19,7 @@
 #define __EOS_TYPES_H__
 
 #include <stdint.h>
+#include "libcxng.h"
 
 typedef uint32_t variant32_t;
 typedef uint64_t name_t;
