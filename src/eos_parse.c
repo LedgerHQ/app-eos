@@ -27,11 +27,11 @@ void printString(const char in[], const char fieldName[], actionArgument_t *arg)
     uint32_t inLength = strlen(in);
     uint32_t labelLength = strlen(fieldName);
 
-    os_memset(arg->label, 0, sizeof(arg->label));
-    os_memset(arg->data, 0, sizeof(arg->data));
+    memset(arg->label, 0, sizeof(arg->label));
+    memset(arg->data, 0, sizeof(arg->data));
 
-    os_memmove(arg->label, fieldName, labelLength);
-    os_memmove(arg->data, in, inLength);
+    memcpy(arg->label, fieldName, labelLength);
+    memcpy(arg->data, in, inLength);
 }
 
 void parseNameField(uint8_t *in, uint32_t inLength, const char fieldName[], actionArgument_t *arg, uint32_t *read, uint32_t *written) {
@@ -45,10 +45,10 @@ void parseNameField(uint8_t *in, uint32_t inLength, const char fieldName[], acti
         THROW(EXCEPTION);
     }
 
-    os_memset(arg->label, 0, sizeof(arg->label));
-    os_memset(arg->data, 0, sizeof(arg->data));
+    memset(arg->label, 0, sizeof(arg->label));
+    memset(arg->data, 0, sizeof(arg->data));
     
-    os_memmove(arg->label, fieldName, labelLength);
+    memcpy(arg->label, fieldName, labelLength);
     name_t name = buffer_to_name_type(in, sizeof(name_t));
     uint32_t writtenToBuff = name_to_string(name, arg->data, sizeof(arg->data)-1);
 
@@ -67,10 +67,10 @@ void parsePublicKeyField(uint8_t *in, uint32_t inLength, const char fieldName[],
         THROW(EXCEPTION);
     }
 
-    os_memset(arg->label, 0, sizeof(arg->label));
-    os_memset(arg->data, 0, sizeof(arg->data));
+    memset(arg->label, 0, sizeof(arg->label));
+    memset(arg->data, 0, sizeof(arg->data));
 
-    os_memmove(arg->label, fieldName, labelLength);
+    memcpy(arg->label, fieldName, labelLength);
     uint32_t writtenToBuff = compressed_public_key_to_wif(in, 33, arg->data, sizeof(arg->data)-1);
 
     *read = 33;
@@ -88,12 +88,12 @@ void parseUint16Field(uint8_t *in, uint32_t inLength, const char fieldName[], ac
         THROW(EXCEPTION);
     }
     
-    os_memset(arg->label, 0, sizeof(arg->label));
-    os_memset(arg->data, 0, sizeof(arg->data));
+    memset(arg->label, 0, sizeof(arg->label));
+    memset(arg->data, 0, sizeof(arg->data));
     
-    os_memmove(arg->label, fieldName, labelLength);
+    memcpy(arg->label, fieldName, labelLength);
     uint16_t value;
-    os_memmove(&value, in, sizeof(uint16_t));
+    memcpy(&value, in, sizeof(uint16_t));
     snprintf(arg->data, sizeof(arg->data)-1, "%d", value);
     
     *read = sizeof(uint16_t);
@@ -111,12 +111,12 @@ void parseUint32Field(uint8_t *in, uint32_t inLength, const char fieldName[], ac
         THROW(EXCEPTION);
     }
     
-    os_memset(arg->label, 0, sizeof(arg->label));
-    os_memset(arg->data, 0, sizeof(arg->data));
+    memset(arg->label, 0, sizeof(arg->label));
+    memset(arg->data, 0, sizeof(arg->data));
     
-    os_memmove(arg->label, fieldName, labelLength);
+    memcpy(arg->label, fieldName, labelLength);
     uint32_t value;
-    os_memmove(&value, in, sizeof(uint32_t));
+    memcpy(&value, in, sizeof(uint32_t));
     snprintf(arg->data, sizeof(arg->data)-1, "%d", value);
     
     *read = sizeof(uint32_t);
@@ -134,12 +134,12 @@ void parseUInt64Field(uint8_t *in, uint32_t inLength, const char fieldName[], ac
         THROW(EXCEPTION);
     }
     
-    os_memset(arg->label, 0, sizeof(arg->label));
-    os_memset(arg->data, 0, sizeof(arg->data));
+    memset(arg->label, 0, sizeof(arg->label));
+    memset(arg->data, 0, sizeof(arg->data));
     
-    os_memmove(arg->label, fieldName, labelLength);
+    memcpy(arg->label, fieldName, labelLength);
     uint64_t value;
-    os_memmove(&value, in, sizeof(uint64_t));
+    memcpy(&value, in, sizeof(uint64_t));
     ui64toa(value, arg->data);
     
     *read = sizeof(uint64_t);
@@ -158,12 +158,12 @@ void parseAssetField(uint8_t *in, uint32_t inLength, const char fieldName[], act
         THROW(EXCEPTION);
     }
 
-    os_memset(arg->label, 0, sizeof(arg->label));
-    os_memset(arg->data, 0, sizeof(arg->data));
+    memset(arg->label, 0, sizeof(arg->label));
+    memset(arg->data, 0, sizeof(arg->data));
 
-    os_memmove(arg->label, fieldName, labelLength);
+    memcpy(arg->label, fieldName, labelLength);
     asset_t asset;
-    os_memmove(&asset, in, sizeof(asset));
+    memcpy(&asset, in, sizeof(asset));
     uint32_t writtenToBuff = asset_to_string(&asset, arg->data, sizeof(arg->data)-1); 
 
     *read = sizeof(asset_t);
@@ -177,10 +177,10 @@ void parseStringField(uint8_t *in, uint32_t inLength, const char fieldName[], ac
         THROW(EXCEPTION);
     }
 
-    os_memset(arg->label, 0, sizeof(arg->label));
-    os_memset(arg->data, 0, sizeof(arg->data));
+    memset(arg->label, 0, sizeof(arg->label));
+    memset(arg->data, 0, sizeof(arg->data));
 
-    os_memmove(arg->label, fieldName, labelLength);
+    memcpy(arg->label, fieldName, labelLength);
 
     uint32_t fieldLength = 0;
     uint32_t readFromBuffer = unpack_variant32(in, inLength, &fieldLength);
@@ -197,7 +197,7 @@ void parseStringField(uint8_t *in, uint32_t inLength, const char fieldName[], ac
     in += readFromBuffer;
     inLength -= readFromBuffer;
 
-    os_memmove(arg->data, in, fieldLength);
+    memcpy(arg->data, in, fieldLength);
 
     in += fieldLength;
     inLength -= fieldLength;

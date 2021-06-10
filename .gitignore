@@ -7,3 +7,6 @@ src/glyphs.h
 .vscode
 .idea
 *.pyc
+coverage
+fuzz/corpus/
+fuzz/build/

@@ -14,10 +14,10 @@
 *  See the License for the specific language governing permissions and
 *  limitations under the License.
 ********************************************************************************/
-
+#include <string.h> 
 #include "eos_utils.h"
 #include "os.h"
-#include "cx.h"
+#include "lcx_hmac.h"
 
 
 unsigned char const BASE58ALPHABET[] = {
@@ -37,7 +37,7 @@ bool b58enc(uint8_t *bin, uint32_t binsz, char *b58, uint32_t *b58sz)
 	
 	size = (binsz - zcount) * 138 / 100 + 1;
 	uint8_t buf[size];
-	os_memset(buf, 0, size);
+	memset(buf, 0, size);
 	
 	for (i = zcount, high = size - 1; i < binsz; ++i, high = j)
 	{
@@ -62,7 +62,7 @@ bool b58enc(uint8_t *bin, uint32_t binsz, char *b58, uint32_t *b58sz)
 	}
 	
 	if (zcount)
-		os_memset(b58, '1', zcount);
+		memset(b58, '1', zcount);
 	for (i = zcount; j < size; ++i, ++j)
 		b58[i] = BASE58ALPHABET[buf[j]];
 	b58[i] = '\0';
@@ -223,7 +223,7 @@ int ecdsa_der_to_sig(const uint8_t *der, uint8_t *sig)
     {
         sig[delta++] = 0;
     }
-    os_memmove(sig + delta, der + offset, length);
+    memcpy(sig + delta, der + offset, length);
 
     delta = 0;
     offset += length;
@@ -245,7 +245,7 @@ int ecdsa_der_to_sig(const uint8_t *der, uint8_t *sig)
     {
         sig[32 + delta++] = 0;
     }
-    os_memmove(sig + 32 + delta, der + offset, length);
+    memcpy(sig + 32 + delta, der + offset, length);
 
     return 1;
 }
@@ -273,9 +273,9 @@ void rng_rfc6979(unsigned char *rnd,
         if (x)
         {
             //b.  Set:          V = 0x01 0x01 0x01 ... 0x01
-            os_memset(V, 0x01, h_len);
+            memset(V, 0x01, h_len);
             //c. Set: K = 0x00 0x00 0x00 ... 0x00
-            os_memset(K, 0x00, h_len);
+            memset(K, 0x00, h_len);
             //d.  Set: K = HMAC_K(V || 0x00 || int2octets(x) || bits2octets(h1))
             V[h_len] = 0;
             cx_hmac_sha256_init(&hmac, K, 32);
@@ -326,7 +326,7 @@ void rng_rfc6979(unsigned char *rnd,
             }
             cx_hmac_sha256_init(&hmac, K, 32);
             cx_hmac((cx_hmac_t *)&hmac, CX_LAST, V, h_len, V, 32);
-            os_memmove(rnd + offset, V, h_len);
+            memcpy(rnd + offset, V, h_len);
             x_len -= h_len;
         }
 

@@ -48,7 +48,7 @@ void initTxContext(txProcessingContext_t *context,
                    cx_sha256_t *dataSha256, 
                    txProcessingContent_t *processingContent,
                    uint8_t dataAllowed) {
-    os_memset(context, 0, sizeof(txProcessingContext_t));
+    memset(context, 0, sizeof(txProcessingContext_t));
     context->sha256 = sha256;
     context->dataSha256 = dataSha256;
     context->content = processingContent;
@@ -121,7 +121,7 @@ static void processEosioVoteProducer(txProcessingContext_t *context) {
     buffer += sizeof(name_t);
 
     name_t proxy = 0;
-    os_memmove(&proxy, buffer, sizeof(name_t));
+    memcpy(&proxy, buffer, sizeof(name_t));
     if (proxy != 0) {
         context->content->argumentCount++;
         return;
@@ -133,34 +133,57 @@ static void processEosioVoteProducer(txProcessingContext_t *context) {
     context->content->argumentCount += totalProducers;
 }
 
+static inline void eos_assert(x) {
+    if (x) {
+        THROW(STREAM_FAULT);
+    }
+}
+
 static void processEosioUpdateAuth(txProcessingContext_t *context) {
     uint32_t bufferLength = context->currentActionDataBufferLength;
     uint8_t *buffer = context->actionDataBuffer;
 
     context->content->argumentCount = 4;
 
-    buffer += 3 * sizeof(name_t) + sizeof(uint32_t);
-    bufferLength -= 3 * sizeof(name_t) + sizeof(uint32_t);
+    uint32_t offset_update = 3 * sizeof(name_t) + sizeof(uint32_t);
+    eos_assert(__builtin_add_overflow(*buffer, offset_update, buffer));
+    eos_assert(__builtin_sub_overflow(bufferLength, offset_update, &bufferLength));
 
     uint32_t totalKeys = 0;
     uint32_t read = unpack_variant32(buffer, bufferLength, &totalKeys);
-    context->content->argumentCount += totalKeys * 2;
 
     // keys data begins here
-    buffer += read; bufferLength -= read;
-    buffer += (1 + sizeof(public_key_t) + sizeof(uint16_t)) * totalKeys;
+    eos_assert(__builtin_add_overflow(*buffer, read, buffer)); // buffer += read
+    eos_assert(__builtin_sub_overflow(bufferLength, read, &bufferLength)); // bufferLength -= read
+
+    offset_update = 1 + sizeof(public_key_t) + sizeof(uint16_t);
+    eos_assert(__builtin_mul_overflow(offset_update, totalKeys, &offset_update));
+    eos_assert(__builtin_add_overflow(*buffer, offset_update, buffer));
+    eos_assert(__builtin_sub_overflow(bufferLength, offset_update, &bufferLength));
+
+    eos_assert(__builtin_add_overflow(totalKeys, totalKeys, &totalKeys));  // totalKeys *= 2
+    eos_assert(__builtin_add_overflow(context->content->argumentCount, totalKeys, &context->content->argumentCount));
 
     uint32_t totalAccounts = 0;
     read = unpack_variant32(buffer, bufferLength, &totalAccounts);
-    context->content->argumentCount += totalAccounts * 2;
 
     // accounts data begins here
-    buffer += read; bufferLength -= read;
-    buffer += (sizeof(permisssion_level_t) + sizeof(uint16_t)) * totalAccounts;
+    eos_assert(__builtin_add_overflow(*buffer, read, buffer));
+    eos_assert(__builtin_sub_overflow(bufferLength, read, &bufferLength));
+
+    offset_update = sizeof(permisssion_level_t) + sizeof(uint16_t);
+    eos_assert(__builtin_mul_overflow(offset_update, totalAccounts, &offset_update));
+    eos_assert(__builtin_add_overflow(*buffer, offset_update, buffer));
+    eos_assert(__builtin_sub_overflow(bufferLength, offset_update, &bufferLength));
+
+    eos_assert(__builtin_add_overflow(totalAccounts, totalAccounts, &totalAccounts)); // totalAccounts *= 2
+    eos_assert(__builtin_add_overflow(context->content->argumentCount, totalAccounts, &context->content->argumentCount));
 
     uint32_t totalWaits = 0;
     read = unpack_variant32(buffer, bufferLength, &totalWaits);
-    context->content->argumentCount += totalWaits * 2; 
+
+    eos_assert(__builtin_add_overflow(totalWaits, totalWaits, &totalWaits)); // totalWaits *= 2
+    eos_assert(__builtin_add_overflow(context->content->argumentCount, totalWaits, &context->content->argumentCount));
 }
 
 static void processEosioDeleteAuth(txProcessingContext_t *context) {
@@ -190,7 +213,7 @@ static void processEosioNewAccountAction(txProcessingContext_t *context) {
     
     // Read owner key threshold
     uint32_t threshold = 0;
-    os_memmove(&threshold, buffer, sizeof(threshold));
+    memcpy(&threshold, buffer, sizeof(threshold));
     if (threshold != 1) {
         PRINTF("Owner Threshold should be 1");
         THROW(EXCEPTION);
@@ -207,7 +230,7 @@ static void processEosioNewAccountAction(txProcessingContext_t *context) {
     // Offset to key weight
     buffer += 1 + sizeof(public_key_t); bufferLength -= 1 + sizeof(public_key_t);
     uint16_t weight = 0;
-    os_memmove(&weight, buffer, sizeof(weight));
+    memcpy(&weight, buffer, sizeof(weight));
     if (weight != 1) {
         PRINTF("Owner key weight must be 1");
         THROW(EXCEPTION);
@@ -230,7 +253,7 @@ static void processEosioNewAccountAction(txProcessingContext_t *context) {
     // process Active authorization
     // -----------------------------------
     
-    os_memmove(&threshold, buffer, sizeof(threshold));
+    memcpy(&threshold, buffer, sizeof(threshold));
     if (threshold != 1) {
         PRINTF("Active Threshold should be 1");
         THROW(EXCEPTION);
@@ -246,7 +269,7 @@ static void processEosioNewAccountAction(txProcessingContext_t *context) {
     // Offset to key weight
     buffer += 1 + sizeof(public_key_t); bufferLength -= 1 + sizeof(public_key_t);
     weight = 0;
-    os_memmove(&weight, buffer, sizeof(weight));
+    memcpy(&weight, buffer, sizeof(weight));
     if (weight != 1) {
         PRINTF("Active key weight must be 1");
         THROW(EXCEPTION);
@@ -417,7 +440,7 @@ static void processZeroSizeField(txProcessingContext_t *context) {
         hashTxData(context, context->workBuffer, length);
 
         // Store data into a buffer
-        os_memmove(context->sizeBuffer + context->currentFieldPos, context->workBuffer, length);
+        memcpy(context->sizeBuffer + context->currentFieldPos, context->workBuffer, length);
 
         context->workBuffer += length;
         context->commandLength -= length;
@@ -432,7 +455,7 @@ static void processZeroSizeField(txProcessingContext_t *context) {
             THROW(EXCEPTION);
         }
         // Reset size buffer
-        os_memset(context->sizeBuffer, 0, sizeof(context->sizeBuffer));
+        memset(context->sizeBuffer, 0, sizeof(context->sizeBuffer));
 
         // Move to next state
         context->state++;
@@ -456,7 +479,7 @@ static void processActionListSizeField(txProcessingContext_t *context) {
         hashTxData(context, context->workBuffer, length);
 
         // Store data into a buffer
-        os_memmove(context->sizeBuffer + context->currentFieldPos, context->workBuffer, length);
+        memcpy(context->sizeBuffer + context->currentFieldPos, context->workBuffer, length);
 
         context->workBuffer += length;
         context->commandLength -= length;
@@ -468,7 +491,7 @@ static void processActionListSizeField(txProcessingContext_t *context) {
         context->currentActionIndex = 0;
         
         // Reset size buffer
-        os_memset(context->sizeBuffer, 0, sizeof(context->sizeBuffer));
+        memset(context->sizeBuffer, 0, sizeof(context->sizeBuffer));
 
         context->state++;
         context->processingField = false;
@@ -493,7 +516,7 @@ static void processActionAccount(txProcessingContext_t *context) {
         hashTxData(context, context->workBuffer, length);
         
         uint8_t *pContract = (uint8_t *)&context->contractName;
-        os_memmove(pContract + context->currentFieldPos, context->workBuffer, length);
+        memcpy(pContract + context->currentFieldPos, context->workBuffer, length);
 
         context->workBuffer += length;
         context->commandLength -= length;
@@ -504,7 +527,7 @@ static void processActionAccount(txProcessingContext_t *context) {
         context->state++;
         context->processingField = false;
 
-        os_memset(context->content->contract, 0, sizeof(context->content->contract));
+        memset(context->content->contract, 0, sizeof(context->content->contract));
         name_to_string(context->contractName, context->content->contract, sizeof(context->content->contract));
     }
 }
@@ -524,7 +547,7 @@ static void processActionName(txProcessingContext_t *context) {
         hashTxData(context, context->workBuffer, length);
 
         uint8_t *pAction = (uint8_t *)&context->contractActionName;
-        os_memmove(pAction + context->currentFieldPos, context->workBuffer, length);
+        memcpy(pAction + context->currentFieldPos, context->workBuffer, length);
 
         context->workBuffer += length;
         context->commandLength -= length;
@@ -535,7 +558,7 @@ static void processActionName(txProcessingContext_t *context) {
         context->state++;
         context->processingField = false;
 
-        os_memset(context->content->action, 0, sizeof(context->content->action));
+        memset(context->content->action, 0, sizeof(context->content->action));
         name_to_string(context->contractActionName, context->content->action, sizeof(context->content->action));
     }
 }
@@ -555,7 +578,7 @@ static void processAuthorizationListSizeField(txProcessingContext_t *context) {
         hashTxData(context, context->workBuffer, length);
 
         // Store data into a buffer
-        os_memmove(context->sizeBuffer + context->currentFieldPos, context->workBuffer, length);
+        memcpy(context->sizeBuffer + context->currentFieldPos, context->workBuffer, length);
 
         context->workBuffer += length;
         context->commandLength -= length;
@@ -566,7 +589,7 @@ static void processAuthorizationListSizeField(txProcessingContext_t *context) {
         unpack_variant32(context->sizeBuffer, context->currentFieldPos + 1, &context->currentAutorizationNumber);
         context->currentAutorizationIndex = 0;
         // Reset size buffer
-        os_memset(context->sizeBuffer, 0, sizeof(context->sizeBuffer));
+        memset(context->sizeBuffer, 0, sizeof(context->sizeBuffer));
 
         // Move to next state
         context->state++;
@@ -596,7 +619,7 @@ static void processAuthorizationPermission(txProcessingContext_t *context) {
     if (context->currentFieldPos == context->currentFieldLength) {
         context->currentAutorizationIndex++;
         // Reset size buffer
-        os_memset(context->sizeBuffer, 0, sizeof(context->sizeBuffer));
+        memset(context->sizeBuffer, 0, sizeof(context->sizeBuffer));
 
         // Start over reading Authorization data or move to the next state
         // if all authorization data have beed read
@@ -687,7 +710,7 @@ static void processActionData(txProcessingContext_t *context) {
                 : context->currentFieldLength - context->currentFieldPos);
 
         hashTxData(context, context->workBuffer, length);
-        os_memmove(context->actionDataBuffer + context->currentFieldPos, context->workBuffer, length);
+        memcpy(context->actionDataBuffer + context->currentFieldPos, context->workBuffer, length);
 
         context->workBuffer += length;
         context->commandLength -= length;

@@ -119,7 +119,7 @@ void parseVoteProducer(uint8_t *buffer, uint32_t bufferLength, uint8_t argNum, a
 
     uint8_t *proxyBuffer = buffer + sizeof(name_t);
     name_t proxy = 0;
-    os_memmove(&proxy, proxyBuffer, sizeof(name_t));
+    memcpy(&proxy, proxyBuffer, sizeof(name_t));
     if (proxy != 0 && argNum == 1) {
         parseNameField(proxyBuffer, sizeof(name_t), "Proxy", arg, &read, &written);
         return;
@@ -159,7 +159,7 @@ void parseUpdateAuth(uint8_t *buffer, uint32_t bufferLength, uint8_t argNum, act
     
     uint8_t *parentBuffer = buffer + 2 * sizeof(name_t);
     name_t parent = 0;
-    os_memmove(&parent, parentBuffer, sizeof(name_t));
+    memcpy(&parent, parentBuffer, sizeof(name_t));
     if (parent != 0 && argNum == 2) {
         parseNameField(parentBuffer, sizeof(name_t), "Parent", arg, &read, &written);
         return;

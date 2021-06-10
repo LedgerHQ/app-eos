@@ -582,17 +582,17 @@ uint32_t get_public_key_and_set_result()
 {
     uint32_t tx = 0;
     G_io_apdu_buffer[tx++] = 65;
-    os_memmove(G_io_apdu_buffer + tx, tmpCtx.publicKeyContext.publicKey.W, 65);
+    memcpy(G_io_apdu_buffer + tx, tmpCtx.publicKeyContext.publicKey.W, 65);
     tx += 65;
 
     uint32_t addressLength = strlen(tmpCtx.publicKeyContext.address);
 
     G_io_apdu_buffer[tx++] = addressLength;
-    os_memmove(G_io_apdu_buffer + tx, tmpCtx.publicKeyContext.address, addressLength);
+    memcpy(G_io_apdu_buffer + tx, tmpCtx.publicKeyContext.address, addressLength);
     tx += addressLength;
     if (tmpCtx.publicKeyContext.getChaincode)
     {
-        os_memmove(G_io_apdu_buffer + tx, tmpCtx.publicKeyContext.chainCode, 32);
+        memcpy(G_io_apdu_buffer + tx, tmpCtx.publicKeyContext.chainCode, 32);
         tx += 32;
     }
     return tx;
@@ -637,8 +637,8 @@ void handleGetPublicKey(uint8_t p1, uint8_t p2, uint8_t *dataBuffer,
     cx_ecfp_init_private_key(CX_CURVE_256K1, privateKeyData, 32, &privateKey);
     cx_ecfp_generate_pair(CX_CURVE_256K1, &tmpCtx.publicKeyContext.publicKey,
                           &privateKey, 1);
-    os_memset(&privateKey, 0, sizeof(privateKey));
-    os_memset(privateKeyData, 0, sizeof(privateKeyData));
+    memset(&privateKey, 0, sizeof(privateKey));
+    memset(privateKeyData, 0, sizeof(privateKeyData));
     public_key_to_wif(tmpCtx.publicKeyContext.publicKey.W, sizeof(tmpCtx.publicKeyContext.publicKey.W),
                       tmpCtx.publicKeyContext.address, sizeof(tmpCtx.publicKeyContext.address));
     if (p1 == P1_NON_CONFIRM)
@@ -689,7 +689,7 @@ uint32_t sign_hash_and_set_result(void)
         CX_CURVE_256K1, tmpCtx.transactionContext.bip32Path,
         tmpCtx.transactionContext.pathLength, privateKeyData, NULL);
     cx_ecfp_init_private_key(CX_CURVE_256K1, privateKeyData, 32, &privateKey);
-    os_memset(privateKeyData, 0, sizeof(privateKeyData));
+    memset(privateKeyData, 0, sizeof(privateKeyData));
 
     // Loop until a candidate matching the canonical signature is found
 
@@ -725,7 +725,7 @@ uint32_t sign_hash_and_set_result(void)
         }
     }
 
-    os_memset(&privateKey, 0, sizeof(privateKey));
+    memset(&privateKey, 0, sizeof(privateKey));
 
     return tx;
 }
