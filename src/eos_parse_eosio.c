@@ -15,6 +15,8 @@
 *  limitations under the License.
 ********************************************************************************/
 
+#include <string.h>
+
 #include "eos_parse_eosio.h"
 #include "eos_types.h"
 #include "os.h"
@@ -175,8 +177,11 @@ void parseUpdateAuth(uint8_t *buffer, uint32_t bufferLength, uint8_t argNum, act
         return;
     }
 
-    uint8_t *keys = buffer += 3 * sizeof(name_t) + sizeof(uint32_t);
-    uint32_t keyBufferLength = bufferLength - 3 * sizeof(name_t) + sizeof(uint32_t);
+    uint32_t prefixLength = 3 * sizeof(name_t) + sizeof(uint32_t);
+    buffer += prefixLength;
+    bufferLength -= prefixLength;
+    uint8_t *keys = buffer;
+    uint32_t keyBufferLength = bufferLength;
 
     uint32_t totalKeys = 0;
     read = unpack_variant32(keys, keyBufferLength, &totalKeys);

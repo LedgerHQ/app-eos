@@ -86,7 +86,6 @@ static void processTokenTransfer(txProcessingContext_t *context) {
 
 static void processEosioDelegate(txProcessingContext_t *context) {
     context->content->argumentCount = 4;
-    uint32_t bufferLength = context->currentActionDataBufferLength;
     uint8_t *buffer = context->actionDataBuffer;
 
     buffer += 2 * sizeof(name_t) + 2 * sizeof(asset_t);
@@ -288,7 +287,7 @@ static void processEosioNewAccountAction(txProcessingContext_t *context) {
         THROW(EXCEPTION);
     }
     buffer += read; bufferLength -= read;
-    read = unpack_variant32(buffer, bufferLength, &size);
+    unpack_variant32(buffer, bufferLength, &size);
     if (size != 0) {
         PRINTF("No delays allowed");
         THROW(EXCEPTION);
