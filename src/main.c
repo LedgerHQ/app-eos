@@ -15,31 +15,24 @@
 *  limitations under the License.
 ********************************************************************************/
 
+#include <stdbool.h>
+#include <string.h>
+
 #include "os.h"
 #include "cx.h"
-#include <stdbool.h>
-
 #include "os_io_seproxyhal.h"
-#include "string.h"
+#include "ux.h"
+
 #include "eos_utils.h"
 #include "eos_stream.h"
-
-#include "ux.h"
+#include "config.h"
+#include "ui.h"
+#include "main.h"
 
 unsigned char G_io_seproxyhal_spi_buffer[IO_SEPROXYHAL_BUFFER_SIZE_B];
 
-unsigned int io_seproxyhal_touch_exit(const bagl_element_t *e);
-unsigned int io_seproxyhal_touch_tx_ok(const bagl_element_t *e);
-unsigned int io_seproxyhal_touch_tx_cancel(const bagl_element_t *e);
-unsigned int io_seproxyhal_touch_address_ok(const bagl_element_t *e);
-unsigned int io_seproxyhal_touch_address_cancel(const bagl_element_t *e);
-void io_exchange_with_code(uint16_t code, uint32_t tx);
-void ui_idle(void);
-
 uint32_t get_public_key_and_set_result(void);
 uint32_t sign_hash_and_set_result(void);
-
-#define MAX_BIP32_PATH 10
 
 #define CLA 0xD4
 #define INS_GET_PUBLIC_KEY 0x02
@@ -64,501 +57,43 @@ uint8_t const SECP256K1_N[] = {0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
                                0xba, 0xae, 0xdc, 0xe6, 0xaf, 0x48, 0xa0, 0x3b,
                                0xbf, 0xd2, 0x5e, 0x8c, 0xd0, 0x36, 0x41, 0x41};
 
-typedef struct publicKeyContext_t
-{
-    cx_ecfp_public_key_t publicKey;
-    char address[60];
-    uint8_t chainCode[32];
-    bool getChaincode;
-} publicKeyContext_t;
-
-typedef struct transactionContext_t
-{
-    uint8_t pathLength;
-    uint32_t bip32Path[MAX_BIP32_PATH];
-    uint8_t hash[32];
-} transactionContext_t;
-
 cx_sha256_t sha256;
 cx_sha256_t dataSha256;
 
-union {
-    publicKeyContext_t publicKeyContext;
-    transactionContext_t transactionContext;
-} tmpCtx;
-
 txProcessingContext_t txProcessingCtx;
 txProcessingContent_t txContent;
+sharedContext_t tmpCtx;
 
-char actionCounter[32];
-char confirmLabel[32];
-
-#include "ux.h"
-ux_state_t G_ux;
-bolos_ux_params_t G_ux_params;
-
-// display stepped screens
-unsigned int ux_step;
-unsigned int ux_step_count;
-
-typedef struct internalStorage_t {
-    uint8_t dataAllowed;
-    uint8_t initialized;
-} internalStorage_t;
-
-const internalStorage_t N_storage_real;
-#define N_storage (*(volatile internalStorage_t *)PIC(&N_storage_real))
-
-void display_settings(void);
-void switch_settings_contract_data(void);
-
-UX_STEP_NOCB(
-    ux_idle_flow_1_step,
-    nn, //pnn,
-    {
-      "Application",
-      "is ready",
-    });
-UX_STEP_NOCB(
-    ux_idle_flow_2_step,
-    bn,
-    {
-      "Version",
-      APPVERSION,
-    });
-UX_STEP_CB(
-    ux_idle_flow_3_step,
-    pb,
-    display_settings(),
-    {
-      &C_icon_coggle,
-      "Settings",
-    });
-UX_STEP_CB(
-    ux_idle_flow_4_step,
-    pb,
-    os_sched_exit(-1),
-    {
-      &C_icon_dashboard_x,
-      "Quit",
-    });
-
-UX_FLOW(
-    ux_idle_flow,
-    &ux_idle_flow_1_step,
-    &ux_idle_flow_2_step,
-    &ux_idle_flow_3_step,
-    &ux_idle_flow_4_step
-);
-
-#if defined(TARGET_NANOS)
-
-UX_STEP_CB(
-    ux_settings_flow_1_step,
-    bnnn_paging,
-    switch_settings_contract_data(),
-    {
-      .title = "Contract data",
-      .text = confirmLabel,
-    });
-
-#else
-
-UX_STEP_CB(
-    ux_settings_flow_1_step,
-    bnnn,
-    switch_settings_contract_data(),
-    {
-      "Contract data",
-      "Allow contract data",
-      "in transactions",
-      confirmLabel,
-    });
-
-#endif
-
-UX_STEP_CB(
-    ux_settings_flow_2_step,
-    pb,
-    ui_idle(),
-    {
-      &C_icon_back_x,
-      "Back",
-    });
-
-UX_FLOW(
-    ux_settings_flow, 
-    &ux_settings_flow_1_step,
-    &ux_settings_flow_2_step
-);
-
-void display_settings() {
-  strlcpy(confirmLabel,
-          (N_storage.dataAllowed ? "Allowed" : "NOT Allowed"),
-          sizeof(confirmLabel));
-  ux_flow_init(0, ux_settings_flow, NULL);
+static void io_exchange_with_code(uint16_t code, uint32_t tx) {
+    G_io_apdu_buffer[tx++] = code >> 8;
+    G_io_apdu_buffer[tx++] = code & 0xFF;
+    // Send back the response, do not restart the event loop
+    io_exchange(CHANNEL_APDU | IO_RETURN_AFTER_TX, tx);
 }
 
-void switch_settings_contract_data() {
-  uint8_t value = (N_storage.dataAllowed ? 0 : 1);
-  nvm_write((void*)&N_storage.dataAllowed, (void*)&value, sizeof(uint8_t));
-  display_settings();
-}
-
-///////////////////////////////////////////////////////////////////////////////
-
-UX_STEP_NOCB(
-    ux_display_public_flow_1_step,
-    pnn,
-    {
-      &C_icon_eye,
-      "Verify",
-      "Public Key",
-    });
-UX_STEP_NOCB(
-    ux_display_public_flow_2_step,
-    bnnn_paging,
-    {
-      .title = "Public Key",
-      .text = tmpCtx.publicKeyContext.address,
-    });
-UX_STEP_CB(
-    ux_display_public_flow_3_step,
-    pb,
-    io_seproxyhal_touch_address_ok(NULL),
-    {
-      &C_icon_validate_14,
-      "Approve",
-    });
-UX_STEP_CB(
-    ux_display_public_flow_4_step,
-    pb,
-    io_seproxyhal_touch_address_cancel(NULL),
-    {
-      &C_icon_crossmark,
-      "Reject",
-    });
-
-UX_FLOW(
-    ux_display_public_flow,
-    &ux_display_public_flow_1_step,
-    &ux_display_public_flow_2_step,
-    &ux_display_public_flow_3_step,
-    &ux_display_public_flow_4_step
-);
-
-///////////////////////////////////////////////////////////////////////////////
-
-#define STATE_LEFT_BORDER 0
-#define STATE_VARIABLE 1
-#define STATE_RIGHT_BORDER 2
-
-char confirm_text1[16];
-char confirm_text2[16];
-
-void display_next_state(uint8_t state);
-void ux_single_action_sign_flow_ok_pressed();
-
-UX_STEP_NOCB(
-    ux_single_action_sign_flow_1_step,
-    pnn,
-    {
-      &C_icon_certificate,
-      "Review",
-      confirmLabel,
-    });
-UX_STEP_NOCB(
-    ux_single_action_sign_flow_2_step,
-    bn,
-    {
-      "Contract",
-      txContent.contract,
-    });
-UX_STEP_NOCB(
-    ux_single_action_sign_flow_3_step,
-    bn,
-    {
-      "Action",
-      txContent.action,
-    });
-UX_STEP_INIT(
-    ux_init_left_border,
-    NULL,
-    NULL,
-    {
-        display_next_state(STATE_LEFT_BORDER);
-    });
-
-UX_STEP_NOCB_INIT(
-    ux_single_action_sign_flow_variable_step,
-    bnnn_paging,
-    {
-        display_next_state(STATE_VARIABLE);
-    },
-    {
-      .title = txContent.arg.label,
-      .text = txContent.arg.data,
-    });
-
-UX_STEP_INIT(
-    ux_init_right_border,
-    NULL,
-    NULL,
-    {
-        display_next_state(STATE_RIGHT_BORDER);
-    });
-
-UX_STEP_CB(
-    ux_single_action_sign_flow_7_step,
-    pbb,
-    ux_single_action_sign_flow_ok_pressed(),
-    {
-      &C_icon_validate_14,
-      confirm_text1,
-      confirm_text2,
-    });
-UX_STEP_CB(
-    ux_single_action_sign_flow_8_step,
-    pbb,
-    io_seproxyhal_touch_tx_cancel(NULL),
-    {
-      &C_icon_crossmark,
-      "Cancel",
-      "signature",
-    });
-
-UX_FLOW(
-    ux_single_action_sign_flow, 
-    &ux_single_action_sign_flow_1_step,
-    &ux_single_action_sign_flow_2_step,
-    &ux_single_action_sign_flow_3_step,
-    &ux_init_left_border,
-    &ux_single_action_sign_flow_variable_step,
-    &ux_init_right_border,
-    &ux_single_action_sign_flow_7_step,
-    &ux_single_action_sign_flow_8_step
-);
-
-void display_next_state(uint8_t state) 
+unsigned int user_action_address_ok(void)
 {
-    if (state == STATE_LEFT_BORDER)
-    {
-        if (ux_step == 0)
-        {
-            ux_step = 1;
-            ux_flow_next();
-        }
-        else if (ux_step == 1) 
-        {
-            --ux_step;
-            ux_flow_prev();
-        }
-        else if (ux_step > 1)
-        {
-            --ux_step;
-            ux_flow_next();
-        }
-    }
-    else if (state == STATE_VARIABLE)
-    {
-        printArgument(ux_step-1, &txProcessingCtx);
-    }
-    else if (state == STATE_RIGHT_BORDER)
-    {
-        if (ux_step < ux_step_count)
-        {
-            ++ux_step;
-            ux_flow_prev();
-        }
-        else if (ux_step == ux_step_count)
-        {
-            ++ux_step;
-            ux_flow_next();
-        }
-        else if (ux_step > ux_step_count)
-        {
-            ux_step = ux_step_count;
-            ux_flow_prev();
-        }
-    }
-}
-
-void ux_single_action_sign_flow_ok_pressed() 
-{
-    parserStatus_e txResult = parseTx(&txProcessingCtx, NULL, 0);
-    switch (txResult) {
-    case STREAM_ACTION_READY:
-        ux_step = 0;
-        ux_step_count = txContent.argumentCount;
-        snprintf(confirmLabel, sizeof(confirmLabel), "Action #%d", txProcessingCtx.currentActionIndex);
-        strlcpy(confirm_text1,
-                txProcessingCtx.currentActionIndex == txProcessingCtx.currentActionNumer ? "Sign" : "Accept",
-                sizeof(confirm_text1));
-        strlcpy(confirm_text2,
-                txProcessingCtx.currentActionIndex == txProcessingCtx.currentActionNumer ? "transaction" : "& review next",
-                sizeof(confirm_text2));
-
-        ux_flow_init(0, ux_single_action_sign_flow, NULL);
-        break;
-    case STREAM_PROCESSING:
-        io_exchange_with_code(0x9000, 0);
-        // Display back the original UX
-        ui_idle();
-        break;
-    case STREAM_FINISHED:
-        io_seproxyhal_touch_tx_ok(NULL);
-        break;
-    default:
-        io_exchange_with_code(0x6A80, 0);
-        // Display back the original UX
-        ui_idle();
-        break;
-    }
-}
-
-
-///////////////////////////////////////////////////////////////////////////////
-
-void ux_multiple_action_sign_flow_ok_pressed();
-
-UX_FLOW_DEF_NOCB(
-    ux_multiple_action_sign_flow_1_step,
-    pnn,
-    {
-      &C_icon_certificate,
-      "Review",
-      "Transaction",
-    });
-UX_FLOW_DEF_NOCB(
-    ux_multiple_action_sign_flow_2_step,
-    bn, //pnn,
-    {
-      "With",
-      actionCounter,
-    });
-UX_FLOW_DEF_VALID(
-    ux_multiple_action_sign_flow_3_step,
-    pbb,
-    ux_multiple_action_sign_flow_ok_pressed(),
-    {
-      &C_icon_validate_14,
-      "Continue",
-      "review"
-    });
-UX_FLOW_DEF_VALID(
-    ux_multiple_action_sign_flow_4_step,
-    pbb,
-    io_seproxyhal_touch_tx_cancel(NULL),
-    {
-      &C_icon_crossmark,
-      "Cancel",
-      "review",
-    });
-
-UX_FLOW(
-    ux_multiple_action_sign_flow, 
-    &ux_multiple_action_sign_flow_1_step,
-    &ux_multiple_action_sign_flow_2_step,
-    &ux_multiple_action_sign_flow_3_step,
-    &ux_multiple_action_sign_flow_4_step
-);
-
-void ux_multiple_action_sign_flow_ok_pressed()
-{
-    parserStatus_e txResult = parseTx(&txProcessingCtx, NULL, 0);
-    switch (txResult) {
-    case STREAM_ACTION_READY:
-        ux_step = 0;
-        ux_step_count = txContent.argumentCount;
-        snprintf(confirmLabel, sizeof(confirmLabel), "Action #%d", txProcessingCtx.currentActionIndex);
-        strlcpy(confirm_text1,
-                txProcessingCtx.currentActionIndex == txProcessingCtx.currentActionNumer ? "Sign" : "Accept",
-                sizeof(confirm_text1));
-        strlcpy(confirm_text2,
-                txProcessingCtx.currentActionIndex == txProcessingCtx.currentActionNumer ? "transaction" : "& review next",
-                sizeof(confirm_text2));
-
-        ux_flow_init(0, ux_single_action_sign_flow, NULL);
-
-        break;
-    case STREAM_PROCESSING:
-        io_exchange_with_code(0x9000, 0);
-        // Display back the original UX
-        ui_idle();
-        break;
-    case STREAM_FINISHED:
-        io_seproxyhal_touch_tx_ok(NULL);
-        break;
-    default:
-        io_exchange_with_code(0x6A80, 0);
-        // Display back the original UX
-        ui_idle();
-        break;
-    }
-}
-
-
-void ui_idle(void)
-{
-    // reserve a display stack slot if none yet
-    if(G_ux.stack_count == 0) {
-        ux_stack_push();
-    }
-    ux_flow_init(0, ux_idle_flow, NULL);
-}
-
-unsigned int io_seproxyhal_touch_exit(const bagl_element_t *e)
-{
-    UNUSED(e);
-    // Go back to the dashboard
-    os_sched_exit(0);
-    return 0; // do not redraw the widget
-}
-
-unsigned int io_seproxyhal_touch_address_ok(const bagl_element_t *e)
-{
-    UNUSED(e);
     uint32_t tx = get_public_key_and_set_result();
     io_exchange_with_code(0x9000, tx);
     // Display back the original UX
     ui_idle();
-    return 0; // do not redraw the widget
+    return 0;
 }
 
-unsigned int io_seproxyhal_touch_address_cancel(const bagl_element_t *e)
+unsigned int user_action_address_cancel(void)
 {
-    UNUSED(e);
     io_exchange_with_code(0x6985, 0);
     // Display back the original UX
     ui_idle();
-    return 0; // do not redraw the widget
+    return 0;
 }
 
-unsigned int io_seproxyhal_touch_tx_ok(const bagl_element_t *e)
+unsigned int user_action_tx_cancel(void)
 {
-    UNUSED(e);
-    uint32_t tx = sign_hash_and_set_result();
-    io_exchange_with_code(0x9000, tx);
-    // Display back the original UX
-    ui_idle();
-
-    return 0; // do not redraw the widge
-}
-
-unsigned int io_seproxyhal_touch_tx_cancel(const bagl_element_t *e)
-{
-    UNUSED(e);
     io_exchange_with_code(0x6985, 0);
     // Display back the original UX
     ui_idle();
-    return 0; // do not redraw the widget
-}
-
-void io_exchange_with_code(uint16_t code, uint32_t tx) {
-	G_io_apdu_buffer[tx++] = code >> 8;
-	G_io_apdu_buffer[tx++] = code & 0xFF;
-    // Send back the response, do not restart the event loop
-	io_exchange(CHANNEL_APDU | IO_RETURN_AFTER_TX, tx);
+    return 0;
 }
 
 unsigned short io_exchange_al(unsigned char channel, unsigned short tx_len)
@@ -591,6 +126,56 @@ unsigned short io_exchange_al(unsigned char channel, unsigned short tx_len)
         THROW(INVALID_PARAMETER);
     }
     return 0;
+}
+
+void user_action_single_action_sign_flow_ok(void)
+{
+    parserStatus_e txResult = parseTx(&txProcessingCtx, NULL, 0);
+    switch (txResult) {
+    case STREAM_ACTION_READY:
+        ui_display_single_action_sign_flow();
+        break;
+    case STREAM_PROCESSING:
+        io_exchange_with_code(0x9000, 0);
+        // Display back the original UX
+        ui_idle();
+        break;
+    case STREAM_FINISHED:
+        io_exchange_with_code(0x9000, sign_hash_and_set_result());
+        // Display back the original UX
+        ui_idle();
+        break;
+    default:
+        io_exchange_with_code(0x6A80, 0);
+        // Display back the original UX
+        ui_idle();
+        break;
+    }
+}
+
+void user_action_multipls_action_sign_flow_ok(void)
+{
+    parserStatus_e txResult = parseTx(&txProcessingCtx, NULL, 0);
+    switch (txResult) {
+    case STREAM_ACTION_READY:
+        ui_display_single_action_sign_flow();
+        break;
+    case STREAM_PROCESSING:
+        io_exchange_with_code(0x9000, 0);
+        // Display back the original UX
+        ui_idle();
+        break;
+    case STREAM_FINISHED:
+        io_exchange_with_code(0x9000, sign_hash_and_set_result());
+        // Display back the original UX
+        ui_idle();
+        break;
+    default:
+        io_exchange_with_code(0x6A80, 0);
+        // Display back the original UX
+        ui_idle();
+        break;
+    }
 }
 
 uint32_t get_public_key_and_set_result()
@@ -663,7 +248,7 @@ void handleGetPublicKey(uint8_t p1, uint8_t p2, uint8_t *dataBuffer,
     }
     else
     {
-        ux_flow_init(0, ux_display_public_flow, NULL);
+        ui_display_public_key_flow();
 
         *flags |= IO_ASYNCH_REPLY;
     }
@@ -679,7 +264,7 @@ void handleGetAppConfiguration(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
     UNUSED(workBuffer);
     UNUSED(dataLength);
     UNUSED(flags);
-    G_io_apdu_buffer[0] = (N_storage.dataAllowed ? 0x01 : 0x00);
+    G_io_apdu_buffer[0] = (is_data_allowed() ? 0x01 : 0x00);
     G_io_apdu_buffer[1] = LEDGER_MAJOR_VERSION;
     G_io_apdu_buffer[2] = LEDGER_MINOR_VERSION;
     G_io_apdu_buffer[3] = LEDGER_PATCH_VERSION;
@@ -770,7 +355,7 @@ void handleSign(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
             workBuffer += 4;
             dataLength -= 4;
         }
-        initTxContext(&txProcessingCtx, &sha256, &dataSha256, &txContent, N_storage.dataAllowed);
+        initTxContext(&txProcessingCtx, &sha256, &dataSha256, &txContent, is_data_allowed() ? 0x01 : 0x00);
     }
     else if (p1 != P1_MORE)
     {
@@ -790,33 +375,12 @@ void handleSign(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
     switch (txResult)
     {
     case STREAM_CONFIRM_PROCESSING:
-        snprintf(actionCounter, sizeof(actionCounter), "%d actions", txProcessingCtx.currentActionNumer);
-        ux_flow_init(0, ux_multiple_action_sign_flow, NULL);
-
+        ui_display_multiple_action_sign_flow();
         *flags |= IO_ASYNCH_REPLY;
-
         break;
     case STREAM_ACTION_READY:
-        ux_step = 0;
-        ux_step_count = txContent.argumentCount;
-
-        if (txProcessingCtx.currentActionNumer > 1) {
-            snprintf(confirmLabel, sizeof(confirmLabel), "Action #%d", txProcessingCtx.currentActionIndex);
-        } else {
-            strlcpy(confirmLabel, "Transaction", sizeof(confirmLabel));
-        }
-
-        strlcpy(confirm_text1,
-                txProcessingCtx.currentActionIndex == txProcessingCtx.currentActionNumer ? "Sign" : "Accept",
-                sizeof(confirm_text1));
-        strlcpy(confirm_text2,
-                txProcessingCtx.currentActionIndex == txProcessingCtx.currentActionNumer ? "transaction" : "& review next",
-                sizeof(confirm_text2));
-        
-        ux_flow_init(0, ux_single_action_sign_flow, NULL);
-
+        ui_display_single_action_sign_flow();
         *flags |= IO_ASYNCH_REPLY;
-
         break;
     case STREAM_FINISHED:
         *tx = sign_hash_and_set_result();
@@ -978,10 +542,8 @@ void sample_main(void)
     return;
 }
 
-// override point, but nothing more to do
-void io_seproxyhal_display(const bagl_element_t *element)
-{
-    io_seproxyhal_display_default((bagl_element_t *)element);
+void io_seproxyhal_display(const bagl_element_t *element) {
+    io_seproxyhal_display_default((bagl_element_t *) element);
 }
 
 unsigned char io_event(unsigned char channel)
@@ -1065,14 +627,7 @@ __attribute__((section(".boot"))) int main(void)
                 G_io_app.plane_mode = os_setting_get(OS_SETTING_PLANEMODE, NULL, 0);
 #endif // TARGET_NANOX
 
-                if (N_storage.initialized != 0x01)
-                {
-                    internalStorage_t storage;
-                    storage.dataAllowed = 0x00;
-                    storage.initialized = 0x01;
-                    nvm_write((void*)&N_storage, (void *)&storage,
-                              sizeof(internalStorage_t));
-                }
+                config_init();
 
                 USB_power(0);
                 USB_power(1);
