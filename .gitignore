@@ -1,14 +1,10 @@
 bin
 debug
-dep
-obj
-src/glyphs.c
-src/glyphs.h
+build
 .vscode
 .idea
 *.pyc
 coverage
 fuzz/corpus/
 fuzz/build/
-tests/elfs/
 tests/functional/snapshots-tmp/

@@ -75,24 +75,24 @@ unsigned int user_action_address_ok(void)
 {
     uint32_t tx = get_public_key_and_set_result();
     io_exchange_with_code(0x9000, tx);
-    // Display back the original UX
-    ui_idle();
+
+    ui_display_public_key_done(true);
     return 0;
 }
 
 unsigned int user_action_address_cancel(void)
 {
     io_exchange_with_code(0x6985, 0);
-    // Display back the original UX
-    ui_idle();
+
+    ui_display_public_key_done(false);
     return 0;
 }
 
 unsigned int user_action_tx_cancel(void)
 {
     io_exchange_with_code(0x6985, 0);
-    // Display back the original UX
-    ui_idle();
+
+    ui_display_action_sign_done(STREAM_FINISHED, false);
     return 0;
 }
 
@@ -137,13 +137,11 @@ void user_action_single_action_sign_flow_ok(void)
         break;
     case STREAM_PROCESSING:
         io_exchange_with_code(0x9000, 0);
-        // Display back the original UX
-        ui_idle();
+        ui_display_action_sign_done(STREAM_PROCESSING, true);
         break;
     case STREAM_FINISHED:
         io_exchange_with_code(0x9000, sign_hash_and_set_result());
-        // Display back the original UX
-        ui_idle();
+        ui_display_action_sign_done(STREAM_FINISHED, true);
         break;
     default:
         io_exchange_with_code(0x6A80, 0);
@@ -162,13 +160,11 @@ void user_action_multipls_action_sign_flow_ok(void)
         break;
     case STREAM_PROCESSING:
         io_exchange_with_code(0x9000, 0);
-        // Display back the original UX
-        ui_idle();
+        ui_display_action_sign_done(STREAM_PROCESSING, true);
         break;
     case STREAM_FINISHED:
         io_exchange_with_code(0x9000, sign_hash_and_set_result());
-        // Display back the original UX
-        ui_idle();
+        ui_display_action_sign_done(STREAM_FINISHED, true);
         break;
     default:
         io_exchange_with_code(0x6A80, 0);
@@ -542,9 +538,11 @@ void sample_main(void)
     return;
 }
 
+#ifdef HAVE_BAGL
 void io_seproxyhal_display(const bagl_element_t *element) {
-    io_seproxyhal_display_default((bagl_element_t *) element);
+    io_seproxyhal_display_default(element);
 }
+#endif  // HAVE_BAGL
 
 unsigned char io_event(unsigned char channel)
 {
@@ -555,12 +553,10 @@ unsigned char io_event(unsigned char channel)
     // can't have more than one tag in the reply, not supported yet.
     switch (G_io_seproxyhal_spi_buffer[0])
     {
-    case SEPROXYHAL_TAG_FINGER_EVENT:
-        UX_FINGER_EVENT(G_io_seproxyhal_spi_buffer);
-        break;
-
     case SEPROXYHAL_TAG_BUTTON_PUSH_EVENT:
+#ifdef HAVE_BAGL
         UX_BUTTON_PUSH_EVENT(G_io_seproxyhal_spi_buffer);
+#endif  // HAVE_BAGL
         break;
 
     case SEPROXYHAL_TAG_STATUS_EVENT:
@@ -570,13 +566,27 @@ unsigned char io_event(unsigned char channel)
         {
             THROW(EXCEPTION_IO_RESET);
         }
-    // no break is intentional
-    default:
+        /* fallthrough */
+    case SEPROXYHAL_TAG_DISPLAY_PROCESSED_EVENT:
+#ifdef HAVE_BAGL
+        UX_DISPLAYED_EVENT({});
+#endif  // HAVE_BAGL
+#ifdef HAVE_NBGL
         UX_DEFAULT_EVENT();
+#endif  // HAVE_NBGL
         break;
 
-    case SEPROXYHAL_TAG_DISPLAY_PROCESSED_EVENT:
-        UX_DISPLAYED_EVENT({});
+#ifdef HAVE_NBGL
+    case SEPROXYHAL_TAG_FINGER_EVENT:
+        UX_FINGER_EVENT(G_io_seproxyhal_spi_buffer);
+        break;
+#endif  // HAVE_NBGL
+
+    case SEPROXYHAL_TAG_TICKER_EVENT:
+        UX_TICKER_EVENT(G_io_seproxyhal_spi_buffer, {});
+        break;
+    default:
+        UX_DEFAULT_EVENT();
         break;
     }
 
@@ -636,7 +646,7 @@ __attribute__((section(".boot"))) int main(void)
 
 #ifdef HAVE_BLE
                 BLE_power(0, NULL);
-                BLE_power(1, "Nano X");
+                BLE_power(1, NULL);
 #endif // HAVE_BLE
 
                 sample_main();

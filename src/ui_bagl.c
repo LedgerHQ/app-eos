@@ -23,9 +23,9 @@
 #include "ux.h"
 
 #include "glyphs.h"
+#include "main.h"
 #include "ui.h"
 #include "config.h"
-#include "main.h"
 
 ux_state_t G_ux;
 bolos_ux_params_t G_ux_params;
@@ -195,6 +195,12 @@ void ui_display_public_key_flow(void) {
   ux_flow_init(0, ux_display_public_flow, NULL);
 }
 
+void ui_display_public_key_done(bool validated) {
+    UNUSED(validated);
+    // Display back the original UX
+    ui_idle();
+}
+
 ///////////////////////////////////////////////////////////////////////////////
 
 #define STATE_LEFT_BORDER 0
@@ -335,13 +341,22 @@ void ui_display_single_action_sign_flow(void) {
         strlcpy(confirmLabel, "Transaction", sizeof(confirmLabel));
     }
 
-    strlcpy(confirm_text1,
-            txProcessingCtx.currentActionIndex == txProcessingCtx.currentActionNumer ? "Sign" : "Accept",
-            sizeof(confirm_text1));
-    strlcpy(confirm_text2,
-            txProcessingCtx.currentActionIndex == txProcessingCtx.currentActionNumer ? "transaction" : "& review next",
-            sizeof(confirm_text2));
+    if (txProcessingCtx.currentActionIndex == txProcessingCtx.currentActionNumer) {
+        strlcpy(confirm_text1, "Sign", sizeof(confirm_text1));
+        strlcpy(confirm_text2, "transaction", sizeof(confirm_text2));
+    } else {
+        strlcpy(confirm_text1, "Accept", sizeof(confirm_text1));
+        strlcpy(confirm_text2, "& review next", sizeof(confirm_text2));
+    }
+
     ux_flow_init(0, ux_single_action_sign_flow, NULL);
+}
+
+void ui_display_action_sign_done(parserStatus_e status, bool validated) {
+    UNUSED(status);
+    UNUSED(validated);
+    // Display back the original UX
+    ui_idle();
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -392,6 +407,5 @@ void ui_display_multiple_action_sign_flow(void) {
     snprintf(actionCounter, sizeof(actionCounter), "%d actions", txProcessingCtx.currentActionNumer);
     ux_flow_init(0, ux_multiple_action_sign_flow, NULL);
 }
-
 
 #endif
