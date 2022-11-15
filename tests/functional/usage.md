@@ -73,7 +73,7 @@ Standard useful pytest options
 
 Custom pytest options
 ```
-    --device <device>           run the test on the specified device [nanos,nanox,nanosp,all]. This parameter is mandatory
+    --device <device>           run the test on the specified device [nanos,nanox,nanosp,fat,all]. This parameter is mandatory
     --backend <backend>         run the tests against the backend [speculos, ledgercomm, ledgerwallet]. Speculos is the default
     --display                   on Speculos, enables the display of the app screen using QT
     --golden_run                on Speculos, screen comparison functions will save the current screen instead of comparing

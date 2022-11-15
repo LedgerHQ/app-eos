@@ -19,6 +19,7 @@ jobs:
           name: nanox
         - path: $NANOSP_SDK
           name: nanosp
+        # add fat
 
     runs-on: ubuntu-latest
 
@@ -72,6 +73,7 @@ jobs:
           - model: nanos
           - model: nanox
           - model: nanosp
+          # add fat
     runs-on: ubuntu-latest
     steps:
       - name: Clone

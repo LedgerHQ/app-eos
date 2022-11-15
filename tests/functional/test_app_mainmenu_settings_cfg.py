@@ -9,7 +9,7 @@ MINOR = 4
 PATCH = 4
 
 
-def test_app_mainmenu_settings_cfg(backend, navigator, test_name):
+def test_app_mainmenu_settings_cfg(firmware, backend, navigator, test_name):
     client = EosClient(backend)
 
     # Get appversion and "data_allowed parameter"
@@ -19,16 +19,25 @@ def test_app_mainmenu_settings_cfg(backend, navigator, test_name):
 
     # Navigate in the main menu and the setting menu
     # Change the "data_allowed parameter" value
-    instructions = [
-        NavIns(NavInsID.RIGHT_CLICK),
-        NavIns(NavInsID.RIGHT_CLICK),
-        NavIns(NavInsID.RIGHT_CLICK),
-        NavIns(NavInsID.LEFT_CLICK),
-        NavIns(NavInsID.BOTH_CLICK),
-        NavIns(NavInsID.BOTH_CLICK),
-        NavIns(NavInsID.RIGHT_CLICK),
-        NavIns(NavInsID.BOTH_CLICK)
-    ]
+    if firmware.device.startswith("nano"):
+        instructions = [
+            NavIns(NavInsID.RIGHT_CLICK),
+            NavIns(NavInsID.RIGHT_CLICK),
+            NavIns(NavInsID.RIGHT_CLICK),
+            NavIns(NavInsID.LEFT_CLICK),
+            NavIns(NavInsID.BOTH_CLICK),
+            NavIns(NavInsID.BOTH_CLICK),
+            NavIns(NavInsID.RIGHT_CLICK),
+            NavIns(NavInsID.BOTH_CLICK)
+        ]
+    else:
+        instructions = [
+            NavIns(NavInsID.USE_CASE_HOME_INFO),
+            NavIns(NavInsID.TOUCH, (200, 190)),  # Change setting value
+            NavIns(NavInsID.USE_CASE_SETTINGS_NEXT),
+            NavIns(NavInsID.USE_CASE_SETTINGS_PREVIOUS),
+            NavIns(NavInsID.USE_CASE_SETTINGS_MULTI_PAGE_EXIT)
+        ]
     navigator.navigate_and_compare(ROOT_SCREENSHOT_PATH, test_name, instructions,
                                    screen_change_before_first_instruction=False)
 
