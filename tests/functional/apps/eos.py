@@ -2,7 +2,7 @@ from base58 import b58encode
 from contextlib import contextmanager
 from enum import IntEnum
 from pycoin.ecdsa.secp256k1 import secp256k1_generator
-from typing import List, Generator
+from typing import Generator
 import hashlib
 
 from cryptography.hazmat.backends import default_backend
@@ -12,6 +12,7 @@ from cryptography.hazmat.primitives.asymmetric.utils import encode_dss_signature
 from cryptography.hazmat.primitives.asymmetric.utils import Prehashed
 
 from ragger.backend.interface import BackendInterface, RAPDU
+from ragger.utils import split_message
 
 
 class INS(IntEnum):
@@ -140,9 +141,6 @@ class EosClient:
                                          p1, p2, derivation_path):
             yield
 
-    def split_message(self, message: bytes) -> List[bytes]:
-        return [message[x:x + MAX_CHUNK_SIZE] for x in range(0, len(message), MAX_CHUNK_SIZE)]
-
     def _send_sign_message(self, message: bytes, first: bool) -> RAPDU:
         if first:
             p1 = P1_FIRST
@@ -163,7 +161,7 @@ class EosClient:
     def send_async_sign_message(self,
                                 derivation_path: bytes,
                                 message: bytes) -> Generator[None, None, None]:
-        messages = self.split_message(derivation_path + message)
+        messages = split_message(derivation_path + message, MAX_CHUNK_SIZE)
         first = True
 
         if len(messages) > 1:

@@ -1,5 +1,4 @@
+ragger[tests,speculos]>=0.8.0
 base58
-bip32
-ragger[tests,speculos]
 pycoin
 asn1

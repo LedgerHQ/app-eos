@@ -1,12 +1,12 @@
-from pathlib import Path
 import pytest
-
+from pathlib import Path
 from ragger import Firmware
 from ragger.backend import SpeculosBackend, LedgerCommBackend, LedgerWalletBackend
 from ragger.navigator import NanoNavigator
 from ragger.utils import app_path_from_app_name
 
 
+# This variable is needed for Speculos only (physical tests need the application to be already installed)
 APPS_DIRECTORY = (Path(__file__).parent.parent / "elfs").resolve()
 
 APP_NAME = "eos"
@@ -82,6 +82,9 @@ def prepare_speculos_args(firmware: Firmware, display: bool):
     return ([app_path], {"args": speculos_args})
 
 
+# Depending on the "--backend" option value, a different backend is
+# instantiated, and the tests will either run on Speculos or on a physical
+# device depending on the backend
 def create_backend(backend: str, firmware: Firmware, display: bool):
     if backend.lower() == "ledgercomm":
         return LedgerCommBackend(firmware, interface="hid")
@@ -94,6 +97,7 @@ def create_backend(backend: str, firmware: Firmware, display: bool):
         raise ValueError(f"Backend '{backend}' is unknown. Valid backends are: {BACKENDS}")
 
 
+# This final fixture will return the properly configured backend client, to be used in tests
 @pytest.fixture
 def client(backend, firmware, display):
     with create_backend(backend, firmware, display) as b:
