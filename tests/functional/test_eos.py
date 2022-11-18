@@ -4,9 +4,9 @@ from pathlib import Path
 from ragger.backend import SpeculosBackend
 from ragger.backend.interface import RAPDU, RaisePolicy
 from ragger.navigator import NavInsID, NavIns
-from ragger.utils import pack_derivation_path
+from ragger.utils import pack_derivation_path, split_message
 
-from apps.eos import EosClient, ErrorType
+from apps.eos import EosClient, ErrorType, MAX_CHUNK_SIZE
 from apps.eos_transaction_builder import Transaction
 
 
@@ -173,7 +173,7 @@ def test_eos_transaction_linkauth_ok(test_name, client, navigator):
 def test_eos_transaction_newaccount_ok(test_name, client, navigator):
     signing_digest, message = load_transaction_from_file("transaction_newaccount.json")
     eos = EosClient(client)
-    messages = eos.split_message(EOS_PATH + message)
+    messages = split_message(EOS_PATH + message, MAX_CHUNK_SIZE)
     assert len(messages) == 2
 
     with eos._send_async_sign_message(messages[0], True):
@@ -206,7 +206,7 @@ def test_eos_transaction_sellram_ok(test_name, client, navigator):
 def test_eos_transaction_unknown_ok(test_name, client, navigator):
     signing_digest, message = load_transaction_from_file("transaction_unknown.json")
     eos = EosClient(client)
-    messages = eos.split_message(EOS_PATH + message)
+    messages = split_message(EOS_PATH + message, MAX_CHUNK_SIZE)
 
     with eos._send_async_sign_message(messages[0], True):
         client.raise_policy = RaisePolicy.RAISE_NOTHING
