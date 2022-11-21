@@ -38,7 +38,7 @@ def test_eos_mainmenu_and_setting(client, test_name, navigator):
     # Get appversion and "data_allowed parameter"
     data_allowed, version = eos.send_get_app_configuration()
     assert data_allowed is False
-    assert version == (1, 4, 3)
+    assert version == (1, 4, 4)
 
     # Navigate in the main menu and the setting menu
     # Change the "data_allowed parameter" value
@@ -57,7 +57,7 @@ def test_eos_mainmenu_and_setting(client, test_name, navigator):
     # Check that "data_allowed parameter" changed
     data_allowed, version = eos.send_get_app_configuration()
     assert data_allowed is True
-    assert version == (1, 4, 3)
+    assert version == (1, 4, 4)
 
 
 def check_get_public_key_resp(client, public_key, address, chaincode):
