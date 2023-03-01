@@ -7,7 +7,7 @@ from utils import ROOT_SCREENSHOT_PATH
 # Taken from the Makefile, to update every time the Makefile version is bumped
 MAJOR = 1
 MINOR = 4
-PATCH = 4
+PATCH = 5
 
 
 def test_app_mainmenu_settings_cfg(firmware, backend, navigator, test_name):
