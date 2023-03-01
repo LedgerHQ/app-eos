@@ -1,6 +1,6 @@
 # app-eos
 
-Eos wallet application framework for Ledger Nano S
+Eos wallet application framework for Ledger devices
 
 This follows the specification available in the doc/ folder
 
@@ -60,10 +60,11 @@ bash-5.1# make scan-build
 
 ## Ledger Variants
 
-The `BOLOS_SDK` has three varients
+The `BOLOS_SDK` has four variants
 - **unset**: Nanos
 - $NANOX_SDK: Nanox
 - $NANOSP_SDK: Nanosp
+- $STAX_SDK: Stax
 
 For Nano X, specify the BOLOS_SDK environment variable before building your app:
 

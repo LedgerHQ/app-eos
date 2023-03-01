@@ -20,10 +20,9 @@ $(error Environment variable BOLOS_SDK is not set)
 endif
 include $(BOLOS_SDK)/Makefile.defines
 
-
 APPVERSION_M=1
 APPVERSION_N=4
-APPVERSION_P=4
+APPVERSION_P=5
 APPVERSION=$(APPVERSION_M).$(APPVERSION_N).$(APPVERSION_P)
 
 APPNAME = Eos
@@ -31,9 +30,11 @@ APP_LOAD_PARAMS += --appFlags 0x240 --path "44'/194'" --curve secp256k1 $(COMMON
 
 #prepare hsm generation
 ifeq ($(TARGET_NAME),TARGET_NANOS)
-ICONNAME=nanos_app_eos.gif
+ICONNAME=icons/nanos_app_eos.gif
+else ifeq ($(TARGET_NAME),TARGET_STAX)
+ICONNAME=icons/stax_app_eos_32px.gif
 else
-ICONNAME=nanox_app_eos.gif
+ICONNAME=icons/nano_app_eos.gif
 endif
 
 ################
@@ -46,7 +47,7 @@ all: default
 ############
 
 DEFINES   += OS_IO_SEPROXYHAL
-DEFINES   += HAVE_BAGL HAVE_SPRINTF
+DEFINES   += HAVE_SPRINTF
 DEFINES   += HAVE_IO_USB HAVE_L4_USBLIB IO_USB_MAX_ENDPOINTS=4 IO_HID_EP_LENGTH=64 HAVE_USB_APDU
 DEFINES   += LEDGER_MAJOR_VERSION=$(APPVERSION_M) LEDGER_MINOR_VERSION=$(APPVERSION_N) LEDGER_PATCH_VERSION=$(APPVERSION_P)
 
@@ -61,26 +62,31 @@ DEFINES   += BLE_SEGMENT_SIZE=32 #max MTU, min 20
 DEFINES   += HAVE_WEBUSB WEBUSB_URL_SIZE_B=0 WEBUSB_URL=""
 
 DEFINES   += UNUSED\(x\)=\(void\)x
+DEFINES   += APPNAME=\"$(APPNAME)\"
 DEFINES   += APPVERSION=\"$(APPVERSION)\"
-DEFINES   += HAVE_UX_FLOW
 
+ifeq ($(TARGET_NAME),TARGET_STAX)
+DEFINES   += NBGL_QRCODE
+else
+DEFINES   += HAVE_BAGL HAVE_UX_FLOW
+ifneq ($(TARGET_NAME),TARGET_NANOS)
+DEFINES   += HAVE_GLO096
+DEFINES   += BAGL_WIDTH=128 BAGL_HEIGHT=64
+DEFINES   += HAVE_BAGL_ELLIPSIS # long label truncation feature
+DEFINES   += HAVE_BAGL_FONT_OPEN_SANS_REGULAR_11PX
+DEFINES   += HAVE_BAGL_FONT_OPEN_SANS_EXTRABOLD_11PX
+DEFINES   += HAVE_BAGL_FONT_OPEN_SANS_LIGHT_16PX
+endif
+endif
 
-ifeq ($(TARGET_NAME),TARGET_NANOX)
-DEFINES       += HAVE_BLE BLE_COMMAND_TIMEOUT_MS=2000
-DEFINES       += HAVE_BLE_APDU # basic ledger apdu transport over BLE
+ifeq ($(TARGET_NAME),$(filter $(TARGET_NAME),TARGET_NANOX TARGET_STAX))
+DEFINES   += HAVE_BLE BLE_COMMAND_TIMEOUT_MS=2000 HAVE_BLE_APDU
 endif
 
 ifeq ($(TARGET_NAME),TARGET_NANOS)
 DEFINES       += IO_SEPROXYHAL_BUFFER_SIZE_B=128
 else
 DEFINES       += IO_SEPROXYHAL_BUFFER_SIZE_B=300
-DEFINES       += HAVE_GLO096
-DEFINES       += HAVE_BAGL BAGL_WIDTH=128 BAGL_HEIGHT=64
-DEFINES       += HAVE_BAGL_ELLIPSIS # long label truncation feature
-DEFINES       += HAVE_BAGL_FONT_OPEN_SANS_REGULAR_11PX
-DEFINES       += HAVE_BAGL_FONT_OPEN_SANS_EXTRABOLD_11PX
-DEFINES       += HAVE_BAGL_FONT_OPEN_SANS_LIGHT_16PX
-DEFINES	      += HAVE_UX_FLOW
 endif
 
 # DEFINES   += DEBUG_APP
@@ -88,16 +94,15 @@ endif
 # Enabling debug PRINTF
 DEBUG = 0
 ifneq ($(DEBUG),0)
-
-        ifeq ($(TARGET_NAME),TARGET_NANOS)
-                DEFINES   += HAVE_PRINTF PRINTF=screen_printf
-        else
-                DEFINES   += HAVE_PRINTF PRINTF=mcu_usb_printf
-        endif
+    DEFINES += HAVE_PRINTF
+    ifeq ($(TARGET_NAME),TARGET_NANOS)
+        DEFINES += PRINTF=screen_printf
+    else
+        DEFINES += PRINTF=mcu_usb_printf
+    endif
 else
-        DEFINES   += PRINTF\(...\)=
+        DEFINES += PRINTF\(...\)=
 endif
-
 
 
 ##############
@@ -133,12 +138,14 @@ include $(BOLOS_SDK)/Makefile.glyphs
 ### computed variables
 APP_SOURCE_PATH  += src
 SDK_SOURCE_PATH  += lib_stusb lib_stusb_impl lib_u2f
-SDK_SOURCE_PATH  += lib_ux
 
-ifeq ($(TARGET_NAME),TARGET_NANOX)
-SDK_SOURCE_PATH  += lib_blewbxx lib_blewbxx_impl
+ifneq ($(TARGET_NAME),TARGET_STAX)
+SDK_SOURCE_PATH += lib_ux
 endif
 
+ifeq ($(TARGET_NAME),$(filter $(TARGET_NAME),TARGET_NANOX TARGET_STAX))
+SDK_SOURCE_PATH += lib_blewbxx lib_blewbxx_impl
+endif
 
 load: all
 	python3 -m ledgerblue.loadApp $(APP_LOAD_PARAMS)
