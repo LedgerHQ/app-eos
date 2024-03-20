@@ -42,8 +42,8 @@ def test_app_mainmenu_settings_cfg(firmware, backend, navigator, test_name):
                 NavInsID.USE_CASE_HOME_INFO,
                 NavIns(NavInsID.TOUCH, (200, 190)),  # Change setting value
                 NavInsID.USE_CASE_SETTINGS_NEXT,
-                NavInsID.USE_CASE_SETTINGS_PREVIOUS,
-                NavInsID.USE_CASE_SETTINGS_MULTI_PAGE_EXIT
+                NavInsID.USE_CASE_SUB_SETTINGS_PREVIOUS,
+                NavInsID.USE_CASE_SUB_SETTINGS_EXIT
             ]
         navigator.navigate_and_compare(ROOT_SCREENSHOT_PATH, test_name, instructions,
                                        screen_change_before_first_instruction=False)
