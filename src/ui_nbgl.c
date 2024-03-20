@@ -56,8 +56,8 @@ static bool nav_callback(uint8_t page, nbgl_pageContent_t *content) {
     } else if (page == 1) {
         content->type = INFOS_LIST;
         content->infosList.nbInfos = 1;
-        content->infosList.infoTypes = (const char**) INFO_TYPES;
-        content->infosList.infoContents = (const char**) INFO_CONTENTS;
+        content->infosList.infoTypes = INFO_TYPES;
+        content->infosList.infoContents = INFO_CONTENTS;
     } else {
         return false;
     }
@@ -142,33 +142,14 @@ void ui_display_public_key_done(bool validated) {
 
 static nbgl_layoutTagValue_t pair;
 static nbgl_layoutTagValueList_t pairList = {0};
-static nbgl_pageInfoLongPress_t infoLongPress;
 
-#define MAX_TAG_VALUE_PAIRS_DISPLAYED 4
-static actionArgument_t bkp_args[MAX_TAG_VALUE_PAIRS_DISPLAYED];
+static actionArgument_t bkp_args[NB_MAX_DISPLAYED_PAIRS_IN_REVIEW];
 
 static char review_title[20];
 
-static void transaction_rejected(void) {
-    user_action_tx_cancel();
-}
-
-static void reject_confirmation(void) {
-    nbgl_useCaseConfirm("Reject transaction?", NULL, "Yes, Reject", "Go back to transaction", transaction_rejected);
-}
-
-// called when long press button on 3rd page is long-touched or when reject footer is touched
-static void review_choice(bool confirm) {
-    if (confirm) {
-        user_action_single_action_sign_flow_ok();
-    } else {
-        reject_confirmation();
-    }
-}
-
-
 // function called by NBGL to get the pair indexed by "index"
 static nbgl_layoutTagValue_t* get_single_action_review_pair(uint8_t index) {
+    memset(&pair, 0, sizeof(pair));
     if (index == 0) {
         pair.item = "Contract";
         pair.value = txContent.contract;
@@ -182,7 +163,7 @@ static nbgl_layoutTagValue_t* get_single_action_review_pair(uint8_t index) {
         // Backup action argument as MAX_TAG_VALUE_PAIRS_DISPLAYED can be displayed
         // simultaneously and their content must be store on app side buffer as
         // only the buffer pointer is copied by the SDK and not the buffer content.
-        uint8_t bkp_index = index % MAX_TAG_VALUE_PAIRS_DISPLAYED;
+        uint8_t bkp_index = index % NB_MAX_DISPLAYED_PAIRS_IN_REVIEW;
         memcpy(bkp_args[bkp_index].label, txContent.arg.label, sizeof(txContent.arg.label));
         memcpy(bkp_args[bkp_index].data, txContent.arg.data, sizeof(txContent.arg.data));
         pair.item = bkp_args[bkp_index].label;
@@ -191,56 +172,76 @@ static nbgl_layoutTagValue_t* get_single_action_review_pair(uint8_t index) {
     return &pair;
 }
 
-static void single_action_review_continue(void) {
-    infoLongPress.icon = &C_stax_app_eos_64px;
-
-    if (txProcessingCtx.currentActionIndex == txProcessingCtx.currentActionNumer) {
-        infoLongPress.text = "Sign transaction";
-        infoLongPress.longPressText = "Hold to sign";
+// function called by NBGL to get the pair indexed by "index"
+static nbgl_layoutTagValue_t* get_multi_action_review_pair(uint8_t index) {
+    memset(&pair, 0, sizeof(pair));
+    if (index == 0) {
+        pair.item = "Review action";
+        snprintf(review_title, sizeof(review_title), "%d of %d",
+                 txProcessingCtx.currentActionIndex,
+                 txProcessingCtx.currentActionNumer);
+        pair.value = review_title;
+        pair.centeredInfo = 1;
+        pair.valueIcon = &C_stax_app_eos_64px;
+        return &pair;
     } else {
-        infoLongPress.text = "Accept & review next";
-        infoLongPress.longPressText = "Hold to continue";
+        return get_single_action_review_pair(index -1);
     }
-
-    pairList.nbMaxLinesForValue = 0;
-    pairList.nbPairs = txContent.argumentCount + 2;
-    pairList.pairs = NULL; // to indicate that callback should be used
-    pairList.callback = get_single_action_review_pair;
-    pairList.startIndex = 0;
-
-    nbgl_useCaseStaticReview(&pairList, &infoLongPress, "Reject transaction", review_choice);
 }
 
+static void review_choice_single(bool confirm) {
+    if (confirm) {
+        user_action_single_action_sign_flow_ok();
+    } else {
+        user_action_tx_cancel();
+    }
+}
+
+static void review_choice_multi(bool confirm) {
+    if (confirm) {
+        if (txProcessingCtx.currentActionIndex == txProcessingCtx.currentActionNumer) {
+            nbgl_useCaseReviewStreamingFinish("Sign operation", review_choice_single);
+        } else {
+            user_action_single_action_sign_flow_ok();
+        }
+    } else {
+        user_action_tx_cancel();
+    }
+}
 
 void ui_display_single_action_sign_flow(void) {
-    if (txProcessingCtx.currentActionNumer > 1) {
-        snprintf(review_title, sizeof(review_title), "Review action #%d",
-                 txProcessingCtx.currentActionIndex);
-        review_title[sizeof(review_title) - 1] = '\0';
-    } else {
-        strlcpy(review_title, "Review transaction", sizeof(review_title));
-    }
+    pairList.nbMaxLinesForValue = 0;
+    pairList.pairs = NULL; // to indicate that callback should be used
+    pairList.startIndex = 0;
 
-    nbgl_useCaseReviewStart(&C_stax_app_eos_64px,
-                            review_title,
-                            NULL,
-                            "Reject transaction",
-                            single_action_review_continue,
-                            reject_confirmation);
+    if (txProcessingCtx.currentActionNumer == 1) {
+        pairList.nbPairs = txContent.argumentCount + 2;
+        pairList.callback = get_single_action_review_pair;
+
+        strlcpy(review_title, "Review transaction", sizeof(review_title));
+        nbgl_useCaseReview(TYPE_OPERATION,
+                           &pairList,
+                           &C_stax_app_eos_64px,
+                           review_title,
+                           NULL,
+                           "Sign operation",
+                           review_choice_single);
+
+    } else {
+        pairList.nbPairs = txContent.argumentCount + 3;
+        pairList.callback = get_multi_action_review_pair;
+
+        nbgl_useCaseReviewStreamingContinue(&pairList, review_choice_multi);
+    }
 }
 
 void ui_display_action_sign_done(parserStatus_e status, bool validated) {
     if (status == STREAM_FINISHED) {
         if (validated) {
-            nbgl_useCaseStatus("TRANSACTION\nSIGNED", true, ui_idle);
+            nbgl_useCaseReviewStatus(STATUS_TYPE_OPERATION_SIGNED, ui_idle);
         } else {
-            nbgl_useCaseStatus("Transaction rejected", false, ui_idle);
+            nbgl_useCaseReviewStatus(STATUS_TYPE_OPERATION_REJECTED, ui_idle);
         }
-    } else {
-        // STREAM_PROCESSING
-        // Display back the original UX to behave as on Nano
-        // But might be good to display a processing screen instead.
-        ui_idle();
     }
 }
 
@@ -249,12 +250,11 @@ void ui_display_action_sign_done(parserStatus_e status, bool validated) {
 void ui_display_multiple_action_sign_flow(void) {
     snprintf(review_title, sizeof(review_title), "With %d actions", txProcessingCtx.currentActionNumer);
 
-    nbgl_useCaseReviewStart(&C_stax_app_eos_64px,
-                            "Review transaction",
-                            review_title,
-                            "Reject transaction",
-                            user_action_multipls_action_sign_flow_ok,
-                            reject_confirmation);
+    nbgl_useCaseReviewStreamingStart(TYPE_OPERATION,
+                       &C_stax_app_eos_64px,
+                       "Review operation",
+                       review_title,
+                       review_choice_single);
 }
 
 #endif

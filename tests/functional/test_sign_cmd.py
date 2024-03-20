@@ -104,8 +104,7 @@ def test_sign_transaction_newaccount_accepted(test_name, firmware, backend, navi
     if firmware.device.startswith("nano"):
         instructions = get_nano_review_instructions(2) + get_nano_review_instructions(7)
     else:
-        instructions = [NavInsID.USE_CASE_REVIEW_TAP] * 4
-        instructions.append(NavInsID.USE_CASE_REVIEW_CONFIRM)
+        instructions = [NavInsID.USE_CASE_REVIEW_TAP] * 5
     with client._send_async_sign_message(messages[0], True):
         navigator.navigate_and_compare(ROOT_SCREENSHOT_PATH,
                                        test_name + "/part1",
@@ -114,9 +113,7 @@ def test_sign_transaction_newaccount_accepted(test_name, firmware, backend, navi
     if firmware.device.startswith("nano"):
         instructions = get_nano_review_instructions(6) + get_nano_review_instructions(8)
     else:
-        instructions = [NavInsID.USE_CASE_REVIEW_TAP] * 3
-        instructions.append(NavInsID.USE_CASE_REVIEW_CONFIRM)
-        instructions += [NavInsID.USE_CASE_REVIEW_TAP] * 3
+        instructions = [NavInsID.USE_CASE_REVIEW_TAP] * 6
         instructions.append(NavInsID.USE_CASE_REVIEW_CONFIRM)
         instructions.append(NavInsID.USE_CASE_STATUS_DISMISS)
     with client._send_async_sign_message(messages[1], False):
