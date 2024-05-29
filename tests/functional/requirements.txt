@@ -1,0 +1,5 @@
+ragger[tests,speculos]>=1.6.0
+base58
+bip_utils
+pycoin
+asn1

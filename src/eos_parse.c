@@ -195,7 +195,6 @@ void parseStringField(uint8_t *in, uint32_t inLength, const char fieldName[], ac
     }
 
     in += readFromBuffer;
-    inLength -= readFromBuffer;
 
     memmove(arg->data, in, fieldLength);
 
@@ -207,7 +206,7 @@ void parsePermissionField(uint8_t *in, uint32_t inLength, const char fieldName[]
     uint32_t accountWrittenLength = 0;
     
     parseNameField(in, inLength, fieldName, arg, read, &accountWrittenLength);
-    strcat(arg->data, "@");
+    strlcat(arg->data, "@", sizeof(arg->data));
     
     in += *read; inLength -= *read;
     if (inLength < sizeof(name_t)) {
