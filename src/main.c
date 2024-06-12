@@ -22,6 +22,7 @@
 #include "cx.h"
 #include "os_io_seproxyhal.h"
 #include "ux.h"
+#include "ledger_assert.h"
 
 #include "eos_utils.h"
 #include "eos_stream.h"
@@ -199,7 +200,7 @@ void handleGetPublicKey(uint8_t p1, uint8_t p2, uint8_t *dataBuffer,
                         volatile unsigned int *tx)
 {
     UNUSED(dataLength);
-    uint8_t privateKeyData[32];
+    uint8_t privateKeyData[64];
     uint32_t bip32Path[MAX_BIP32_PATH];
     uint32_t i;
     uint8_t bip32PathLength = *(dataBuffer++);
@@ -225,14 +226,17 @@ void handleGetPublicKey(uint8_t p1, uint8_t p2, uint8_t *dataBuffer,
         dataBuffer += 4;
     }
     tmpCtx.publicKeyContext.getChaincode = (p2 == P2_CHAINCODE);
-    os_perso_derive_node_bip32(CX_CURVE_256K1, bip32Path, bip32PathLength,
-                               privateKeyData,
-                               (tmpCtx.publicKeyContext.getChaincode
-                                    ? tmpCtx.publicKeyContext.chainCode
-                                    : NULL));
-    cx_ecfp_init_private_key(CX_CURVE_256K1, privateKeyData, 32, &privateKey);
-    cx_ecfp_generate_pair(CX_CURVE_256K1, &tmpCtx.publicKeyContext.publicKey,
-                          &privateKey, 1);
+    CX_ASSERT(os_derive_bip32_no_throw(
+        CX_CURVE_256K1,
+        bip32Path,
+        bip32PathLength,
+        privateKeyData,
+        (tmpCtx.publicKeyContext.getChaincode ? tmpCtx.publicKeyContext.chainCode : NULL)));
+    CX_ASSERT(cx_ecfp_init_private_key_no_throw(CX_CURVE_256K1, privateKeyData, 32, &privateKey));
+    CX_ASSERT(cx_ecfp_generate_pair_no_throw(CX_CURVE_256K1,
+                                             &tmpCtx.publicKeyContext.publicKey,
+                                             &privateKey,
+                                             1));
     memset(&privateKey, 0, sizeof(privateKey));
     memset(privateKeyData, 0, sizeof(privateKeyData));
     public_key_to_wif(tmpCtx.publicKeyContext.publicKey.W, sizeof(tmpCtx.publicKeyContext.publicKey.W),
@@ -271,8 +275,12 @@ void handleGetAppConfiguration(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
 uint32_t sign_hash_and_set_result(void) 
 {
     // store hash
-    cx_hash(&sha256.header, CX_LAST, tmpCtx.transactionContext.hash, 0, 
-        tmpCtx.transactionContext.hash, sizeof(tmpCtx.transactionContext.hash));
+    CX_ASSERT(cx_hash_no_throw(&sha256.header,
+                               CX_LAST,
+                               tmpCtx.transactionContext.hash,
+                               0,
+                               tmpCtx.transactionContext.hash,
+                               sizeof(tmpCtx.transactionContext.hash)));
 
     uint8_t privateKeyData[64];
     cx_ecfp_private_key_t privateKey;
@@ -281,10 +289,12 @@ uint32_t sign_hash_and_set_result(void)
     uint8_t K[32];
     int tries = 0;
 
-    os_perso_derive_node_bip32(
-        CX_CURVE_256K1, tmpCtx.transactionContext.bip32Path,
-        tmpCtx.transactionContext.pathLength, privateKeyData, NULL);
-    cx_ecfp_init_private_key(CX_CURVE_256K1, privateKeyData, 32, &privateKey);
+    CX_ASSERT(os_derive_bip32_no_throw(CX_CURVE_256K1,
+                                       tmpCtx.transactionContext.bip32Path,
+                                       tmpCtx.transactionContext.pathLength,
+                                       privateKeyData,
+                                       NULL));
+    CX_ASSERT(cx_ecfp_init_private_key_no_throw(CX_CURVE_256K1, privateKeyData, 32, &privateKey));
     memset(privateKeyData, 0, sizeof(privateKeyData));
 
     // Loop until a candidate matching the canonical signature is found
@@ -300,12 +310,16 @@ uint32_t sign_hash_and_set_result(void)
             rng_rfc6979(G_io_apdu_buffer + 100, tmpCtx.transactionContext.hash, NULL, 0, SECP256K1_N, 32, V, K);
         }
         uint32_t infos;
-        cx_ecdsa_sign(&privateKey, CX_NO_CANONICAL | CX_RND_PROVIDED | CX_LAST, CX_SHA256,
-                      tmpCtx.transactionContext.hash, 32,
-                      G_io_apdu_buffer + 100, 100,
-                      &infos);
-        if ((infos & CX_ECCINFO_PARITY_ODD) != 0)
-        {
+        uint32_t sig_len = 100;
+        CX_ASSERT(cx_ecdsa_sign_no_throw(&privateKey,
+                                         CX_NO_CANONICAL | CX_RND_PROVIDED | CX_LAST,
+                                         CX_SHA256,
+                                         tmpCtx.transactionContext.hash,
+                                         32,
+                                         G_io_apdu_buffer + 100,
+                                         &sig_len,
+                                         &infos));
+        if ((infos & CX_ECCINFO_PARITY_ODD) != 0) {
             G_io_apdu_buffer[100] |= 0x01;
         }
         G_io_apdu_buffer[0] = 27 + 4 + (G_io_apdu_buffer[100] & 0x01);
@@ -566,7 +580,7 @@ unsigned char io_event(unsigned char channel)
         {
             THROW(EXCEPTION_IO_RESET);
         }
-        /* fallthrough */
+    __attribute__((fallthrough)); 
     case SEPROXYHAL_TAG_DISPLAY_PROCESSED_EVENT:
 #ifdef HAVE_BAGL
         UX_DISPLAYED_EVENT({});

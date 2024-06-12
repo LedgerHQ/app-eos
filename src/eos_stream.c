@@ -16,6 +16,7 @@
 ********************************************************************************/
 
 #include <string.h>
+#include "ledger_assert.h"
 #include "eos_stream.h"
 #include "os.h"
 #include "cx.h"
@@ -204,9 +205,13 @@ static void processEosioUnlinkAuth(txProcessingContext_t *context) {
 }
 
 static void processUnknownAction(txProcessingContext_t *context) {
-    cx_hash(&context->dataSha256->header, CX_LAST, context->dataChecksum, 0,
-            context->dataChecksum, sizeof(context->dataChecksum));
-    context->content->argumentCount = 3;  
+    CX_ASSERT(cx_hash_no_throw(&context->dataSha256->header,
+                               CX_LAST,
+                               context->dataChecksum,
+                               0,
+                               context->dataChecksum,
+                               sizeof(context->dataChecksum)));
+    context->content->argumentCount = 3;
 }
 
 static void processEosioNewAccountAction(txProcessingContext_t *context) {
@@ -392,11 +397,11 @@ static bool isKnownAction(txProcessingContext_t *context) {
  * dependencies on specific hash implementation.
 */
 static void hashTxData(txProcessingContext_t *context, uint8_t *buffer, uint32_t length) {
-    cx_hash(&context->sha256->header, 0, buffer, length, NULL, 0);
+    CX_ASSERT(cx_hash_no_throw(&context->sha256->header, 0, buffer, length, NULL, 0));
 }
 
 static void hashActionData(txProcessingContext_t *context, uint8_t *buffer, uint32_t length) {
-    cx_hash(&context->dataSha256->header, 0, buffer, length, NULL, 0);
+    CX_ASSERT(cx_hash_no_throw(&context->dataSha256->header, 0, buffer, length, NULL, 0));
 }
 
 /**
