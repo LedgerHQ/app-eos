@@ -32,10 +32,6 @@
 #include "config.h"
 #include "eos_parse.h"
 
-ux_state_t G_ux;
-bolos_ux_params_t G_ux_params;
-
-
 static nbgl_layoutSwitch_t switches[1] = {0};
 static const char* const INFO_TYPES[] = {"Version"};
 static const char* const INFO_CONTENTS[] = {APPVERSION};

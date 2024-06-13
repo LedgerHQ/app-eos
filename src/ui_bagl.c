@@ -27,8 +27,6 @@
 #include "ui.h"
 #include "config.h"
 
-ux_state_t G_ux;
-bolos_ux_params_t G_ux_params;
 
 static char actionCounter[32];
 static char confirmLabel[32];

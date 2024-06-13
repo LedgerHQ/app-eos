@@ -23,14 +23,13 @@
 #include "os_io_seproxyhal.h"
 #include "ux.h"
 #include "ledger_assert.h"
+#include "offsets.h"
 
 #include "eos_utils.h"
 #include "eos_stream.h"
 #include "config.h"
 #include "ui.h"
 #include "main.h"
-
-unsigned char G_io_seproxyhal_spi_buffer[IO_SEPROXYHAL_BUFFER_SIZE_B];
 
 uint32_t get_public_key_and_set_result(void);
 uint32_t sign_hash_and_set_result(void);
@@ -46,12 +45,6 @@ uint32_t sign_hash_and_set_result(void);
 #define P1_FIRST 0x00
 #define P1_MORE 0x80
 
-#define OFFSET_CLA 0
-#define OFFSET_INS 1
-#define OFFSET_P1 2
-#define OFFSET_P2 3
-#define OFFSET_LC 4
-#define OFFSET_CDATA 5
 
 uint8_t const SECP256K1_N[] = {0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
                                0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xfe,
@@ -94,38 +87,6 @@ unsigned int user_action_tx_cancel(void)
     io_exchange_with_code(0x6985, 0);
 
     ui_display_action_sign_done(STREAM_FINISHED, false);
-    return 0;
-}
-
-unsigned short io_exchange_al(unsigned char channel, unsigned short tx_len)
-{
-    switch (channel & ~(IO_FLAGS))
-    {
-    case CHANNEL_KEYBOARD:
-        break;
-
-    // multiplexed io exchange over a SPI channel and TLV encapsulated protocol
-    case CHANNEL_SPI:
-        if (tx_len)
-        {
-            io_seproxyhal_spi_send(G_io_apdu_buffer, tx_len);
-
-            if (channel & IO_RESET_AFTER_REPLIED)
-            {
-                reset();
-            }
-            return 0; // nothing received from the master so far (it's a tx
-                      // transaction)
-        }
-        else
-        {
-            return io_seproxyhal_spi_recv(G_io_apdu_buffer,
-                                          sizeof(G_io_apdu_buffer), 0);
-        }
-
-    default:
-        THROW(INVALID_PARAMETER);
-    }
     return 0;
 }
 
@@ -480,11 +441,14 @@ void handleApdu(volatile unsigned int *flags, volatile unsigned int *tx)
     END_TRY;
 }
 
-void sample_main(void)
+void app_main(void)
 {
     volatile unsigned int rx = 0;
     volatile unsigned int tx = 0;
     volatile unsigned int flags = 0;
+
+    config_init();
+    ui_idle();
 
     // DESIGN NOTE: the bootloader ignores the way APDU are fetched. The only
     // goal is to retrieve APDU.
@@ -550,137 +514,4 @@ void sample_main(void)
 
     // return_to_dashboard:
     return;
-}
-
-#ifdef HAVE_BAGL
-void io_seproxyhal_display(const bagl_element_t *element) {
-    io_seproxyhal_display_default(element);
-}
-#endif  // HAVE_BAGL
-
-unsigned char io_event(unsigned char channel)
-{
-    UNUSED(channel);
-    // nothing done with the event, throw an error on the transport layer if
-    // needed
-
-    // can't have more than one tag in the reply, not supported yet.
-    switch (G_io_seproxyhal_spi_buffer[0])
-    {
-    case SEPROXYHAL_TAG_BUTTON_PUSH_EVENT:
-#ifdef HAVE_BAGL
-        UX_BUTTON_PUSH_EVENT(G_io_seproxyhal_spi_buffer);
-#endif  // HAVE_BAGL
-        break;
-
-    case SEPROXYHAL_TAG_STATUS_EVENT:
-        if (G_io_apdu_media == IO_APDU_MEDIA_USB_HID &&
-            !(U4BE(G_io_seproxyhal_spi_buffer, 3) &
-              SEPROXYHAL_TAG_STATUS_EVENT_FLAG_USB_POWERED))
-        {
-            THROW(EXCEPTION_IO_RESET);
-        }
-    __attribute__((fallthrough)); 
-    case SEPROXYHAL_TAG_DISPLAY_PROCESSED_EVENT:
-#ifdef HAVE_BAGL
-        UX_DISPLAYED_EVENT({});
-#endif  // HAVE_BAGL
-#ifdef HAVE_NBGL
-        UX_DEFAULT_EVENT();
-#endif  // HAVE_NBGL
-        break;
-
-#ifdef HAVE_NBGL
-    case SEPROXYHAL_TAG_FINGER_EVENT:
-        UX_FINGER_EVENT(G_io_seproxyhal_spi_buffer);
-        break;
-#endif  // HAVE_NBGL
-
-    case SEPROXYHAL_TAG_TICKER_EVENT:
-        UX_TICKER_EVENT(G_io_seproxyhal_spi_buffer, {});
-        break;
-    default:
-        UX_DEFAULT_EVENT();
-        break;
-    }
-
-    // close the event if not done previously (by a display or whatever)
-    if (!io_seproxyhal_spi_is_status_sent())
-    {
-        io_seproxyhal_general_status();
-    }
-
-    // command has been processed, DO NOT reset the current APDU transport
-    return 1;
-}
-
-void app_exit(void)
-{
-    BEGIN_TRY_L(exit)
-    {
-        TRY_L(exit)
-        {
-            os_sched_exit(-1);
-        }
-        FINALLY_L(exit)
-        {
-        }
-    }
-    END_TRY_L(exit);
-}
-
-__attribute__((section(".boot"))) int main(void)
-{
-    // exit critical section
-    __asm volatile("cpsie i");
-
-    for (;;)
-    {
-        UX_INIT();
-
-        // ensure exception will work as planned
-        os_boot();
-
-        BEGIN_TRY
-        {
-            TRY
-            {
-                io_seproxyhal_init();
-#ifdef TARGET_NANOX
-                // grab the current plane mode setting
-                G_io_app.plane_mode = os_setting_get(OS_SETTING_PLANEMODE, NULL, 0);
-#endif // TARGET_NANOX
-
-                config_init();
-
-                USB_power(0);
-                USB_power(1);
-
-                ui_idle();
-
-#ifdef HAVE_BLE
-                BLE_power(0, NULL);
-                BLE_power(1, NULL);
-#endif // HAVE_BLE
-
-                sample_main();
-            }
-            CATCH(EXCEPTION_IO_RESET)
-            {
-                // reset IO and UX before continuing
-                continue;
-            }
-            CATCH_ALL
-            {
-                break;
-            }
-            FINALLY
-            {
-            }
-        }
-        END_TRY;
-    }
-    app_exit();
-
-    return 0;
 }
