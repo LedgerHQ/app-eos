@@ -75,9 +75,9 @@ class EosClient:
         rapdu: RAPDU = self._client.exchange(CLA, INS.INS_GET_APP_CONFIGURATION, 0, 0, b"")
         response = rapdu.data
         # response = dataAllowed (1) ||
-        #            LEDGER_MAJOR_VERSION (1) ||
-        #            LEDGER_MINOR_VERSION (1) ||
-        #            LEDGER_PATCH_VERSION (1)
+        #            MAJOR_VERSION (1) ||
+        #            MINOR_VERSION (1) ||
+        #            PATCH_VERSION (1)
         assert len(response) == 4
 
         data_allowed = int(response[0]) == 1
