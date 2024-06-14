@@ -120,4 +120,3 @@ SDK_SOURCE_PATH  += lib_u2f
 
 # Import generic rules from the SDK
 include $(BOLOS_SDK)/Makefile.standard_app
-

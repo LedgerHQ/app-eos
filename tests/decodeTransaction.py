@@ -175,7 +175,7 @@ parsing_actions = {
     9: next_step,
     10: next_step,
     11: store_auth,
-    12: next_step, 
+    12: next_step,
     13: define_next_auth_step,
     14: next_step,
     15: define_next_action_step,
@@ -195,12 +195,12 @@ with open(args.file) as f:
     while True:
         hex_data = ''
 
-        print_header("INSTUCTION SET")
+        print_header("INSTRUCTION SET")
         # cla
         k = f.read(2)
         print_value(codes[k], k)
 
-        # instuction
+        # instruction
         k = f.read(2)
         print_value(codes[k], k)
 
@@ -223,10 +223,10 @@ with open(args.file) as f:
             path_size = f.read(2)
             print_size('path size', path_size)
             path_size = int(path_size, 16)
-        
+
             print_header('PATH SET')
             processing_size = print_path(f, path_size, processing_size)
-        
+
         print_header("TX SET")
         print_value('processing size', processing_size)
 

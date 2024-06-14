@@ -36,7 +36,7 @@ static nbgl_layoutSwitch_t switches[1] = {0};
 static const char* const INFO_TYPES[] = {"Version"};
 static const char* const INFO_CONTENTS[] = {APPVERSION};
 
-static bool nav_callback(uint8_t page, nbgl_pageContent_t *content) {
+static bool nav_callback(uint8_t page, nbgl_pageContent_t* content) {
     // the first settings page contains the version of the app
     // the second settings page contains 1 switch
     if (page == 0) {
@@ -48,7 +48,7 @@ static bool nav_callback(uint8_t page, nbgl_pageContent_t *content) {
 
         content->type = SWITCHES_LIST;
         content->switchesList.nbSwitches = 1;
-        content->switchesList.switches = (nbgl_layoutSwitch_t*)switches;
+        content->switchesList.switches = (nbgl_layoutSwitch_t*) switches;
     } else if (page == 1) {
         content->type = INFOS_LIST;
         content->infosList.nbInfos = 1;
@@ -60,7 +60,6 @@ static bool nav_callback(uint8_t page, nbgl_pageContent_t *content) {
     // valid page so return true
     return true;
 }
-
 
 // controlsCallback callback called when any controls in the settings (radios, switches)
 // is called (the tokens must be >= FIRST_USER_TOKEN)
@@ -116,14 +115,16 @@ static void display_address_callback(bool confirm) {
 
 // called when tapping on review start page to actually display address
 static void display_addr(void) {
-    nbgl_useCaseAddressConfirmation(tmpCtx.publicKeyContext.address,
-                                    &display_address_callback);
+    nbgl_useCaseAddressConfirmation(tmpCtx.publicKeyContext.address, &display_address_callback);
 }
 
 void ui_display_public_key_flow(void) {
     nbgl_useCaseReviewStart(&C_stax_app_eos_64px,
-                            "Verify Eos\naddress", NULL, "Cancel",
-                            display_addr, address_verification_cancelled);
+                            "Verify Eos\naddress",
+                            NULL,
+                            "Cancel",
+                            display_addr,
+                            address_verification_cancelled);
 }
 
 void ui_display_public_key_done(bool validated) {
@@ -150,7 +151,11 @@ static void transaction_rejected(void) {
 }
 
 static void reject_confirmation(void) {
-    nbgl_useCaseConfirm("Reject transaction?", NULL, "Yes, Reject", "Go back to transaction", transaction_rejected);
+    nbgl_useCaseConfirm("Reject transaction?",
+                        NULL,
+                        "Yes, Reject",
+                        "Go back to transaction",
+                        transaction_rejected);
 }
 
 // called when long press button on 3rd page is long-touched or when reject footer is touched
@@ -161,7 +166,6 @@ static void review_choice(bool confirm) {
         reject_confirmation();
     }
 }
-
 
 // function called by NBGL to get the pair indexed by "index"
 static nbgl_layoutTagValue_t* get_single_action_review_pair(uint8_t index) {
@@ -200,17 +204,18 @@ static void single_action_review_continue(void) {
 
     pairList.nbMaxLinesForValue = 0;
     pairList.nbPairs = txContent.argumentCount + 2;
-    pairList.pairs = NULL; // to indicate that callback should be used
+    pairList.pairs = NULL;  // to indicate that callback should be used
     pairList.callback = get_single_action_review_pair;
     pairList.startIndex = 0;
 
     nbgl_useCaseStaticReview(&pairList, &infoLongPress, "Reject transaction", review_choice);
 }
 
-
 void ui_display_single_action_sign_flow(void) {
     if (txProcessingCtx.currentActionNumer > 1) {
-        snprintf(review_title, sizeof(review_title), "Review action #%d",
+        snprintf(review_title,
+                 sizeof(review_title),
+                 "Review action #%d",
                  txProcessingCtx.currentActionIndex);
         review_title[sizeof(review_title) - 1] = '\0';
     } else {
@@ -243,7 +248,10 @@ void ui_display_action_sign_done(parserStatus_e status, bool validated) {
 ///////////////////////////////////////////////////////////////////////////////
 
 void ui_display_multiple_action_sign_flow(void) {
-    snprintf(review_title, sizeof(review_title), "With %d actions", txProcessingCtx.currentActionNumer);
+    snprintf(review_title,
+             sizeof(review_title),
+             "With %d actions",
+             txProcessingCtx.currentActionNumer);
 
     nbgl_useCaseReviewStart(&C_stax_app_eos_64px,
                             "Review transaction",

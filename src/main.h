@@ -18,16 +18,14 @@
 
 #define MAX_BIP32_PATH 10
 
-typedef struct publicKeyContext_t
-{
+typedef struct publicKeyContext_t {
     cx_ecfp_public_key_t publicKey;
     char address[60];
     uint8_t chainCode[32];
     bool getChaincode;
 } publicKeyContext_t;
 
-typedef struct transactionContext_t
-{
+typedef struct transactionContext_t {
     uint8_t pathLength;
     uint32_t bip32Path[MAX_BIP32_PATH];
     uint8_t hash[32];

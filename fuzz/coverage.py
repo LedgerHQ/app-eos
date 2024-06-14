@@ -5,7 +5,7 @@ from glob import glob
 
 
 def extract_profiles(corpus_path, cov_executable):
-    """ Run corpus through coverage executable.  This function 
+    """ Run corpus through coverage executable.  This function
     avoids a limitation on filename length on Windows """
     # group by packs of N for faster execution
     # N has to be low enough that Windows does not

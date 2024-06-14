@@ -20,15 +20,13 @@ typedef struct {
 } cx_ripemd160_t;
 
 typedef struct {
-    
 } cx_hmac_sha256_t;
 
 typedef struct {
-    
 } cx_hmac_t;
 
 //#define cx_hash(x, y, z, l, m)
-#define cx_hmac(x, y, z, l, m);
+#define cx_hmac(x, y, z, l, m)
 #define cx_hmac_sha256_init(x, y, z)
 #define cx_ripemd160_init(x)
 //#define cx_sha256_init(x) SHA256_Init
@@ -36,6 +34,10 @@ typedef struct {
 #define CX_LAST 1
 void cx_sha256_init(CC_SHA256_CTX *x);
 
-void cx_hash(CC_SHA256_CTX *x, unsigned char flag, unsigned char *buffer, unsigned int size, unsigned char *outbuff);
+void cx_hash(CC_SHA256_CTX *x,
+             unsigned char flag,
+             unsigned char *buffer,
+             unsigned int size,
+             unsigned char *outbuff);
 
 #endif /* cx_h */
