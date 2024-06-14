@@ -61,10 +61,7 @@ void initTxContext(txProcessingContext_t *context,
 
 uint8_t readTxByte(txProcessingContext_t *context) {
     uint8_t data;
-    if (context->commandLength < 1) {
-        PRINTF("readTxByte Underflow\n");
-        THROW(EXCEPTION);
-    }
+    LEDGER_ASSERT(context->commandLength >= 1, "readTxByte Underflow");
     data = *context->workBuffer;
     context->workBuffer++;
     context->commandLength--;
@@ -132,12 +129,6 @@ static void processEosioVoteProducer(txProcessingContext_t *context) {
     context->content->argumentCount += totalProducers;
 }
 
-static inline void eos_assert(x) {
-    if (!x) {
-        THROW(STREAM_FAULT);
-    }
-}
-
 static void processEosioUpdateAuth(txProcessingContext_t *context) {
     uint32_t bufferLength = context->currentActionDataBufferLength;
     uint8_t *buffer = context->actionDataBuffer;
@@ -146,50 +137,50 @@ static void processEosioUpdateAuth(txProcessingContext_t *context) {
 
     uint32_t offset_update = 3 * sizeof(name_t) + sizeof(uint32_t);
 
-    eos_assert(offset_update < bufferLength);
+    LEDGER_ASSERT(offset_update < bufferLength, "processEosioUpdateAuth");
     buffer += offset_update;
     bufferLength -= offset_update;
 
     uint32_t totalKeys = 0;
     uint32_t read = unpack_variant32(buffer, bufferLength, &totalKeys);
 
-    eos_assert(read < bufferLength);
+    LEDGER_ASSERT(read < bufferLength, "processEosioUpdateAuth");
     buffer += read;
     bufferLength -= read;
 
     offset_update = 1 + sizeof(public_key_t) + sizeof(uint16_t);
-    eos_assert(!__builtin_mul_overflow(offset_update, totalKeys, &offset_update));
+    LEDGER_ASSERT(!__builtin_mul_overflow(offset_update, totalKeys, &offset_update), "processEosioUpdateAuth");
 
-    eos_assert(offset_update < bufferLength);
+    LEDGER_ASSERT(offset_update < bufferLength, "processEosioUpdateAuth");
     buffer += offset_update;
     bufferLength -= offset_update;
 
-    eos_assert(!__builtin_add_overflow(totalKeys, totalKeys, &totalKeys));  // totalKeys *= 2
-    eos_assert(!__builtin_add_overflow(context->content->argumentCount, totalKeys, &context->content->argumentCount));
+    LEDGER_ASSERT(!__builtin_add_overflow(totalKeys, totalKeys, &totalKeys), "processEosioUpdateAuth");  // totalKeys *= 2
+    LEDGER_ASSERT(!__builtin_add_overflow(context->content->argumentCount, totalKeys, &context->content->argumentCount), "processEosioUpdateAuth");
 
     uint32_t totalAccounts = 0;
     read = unpack_variant32(buffer, bufferLength, &totalAccounts);
 
     // accounts data begins here
-    eos_assert(read < bufferLength);
+    LEDGER_ASSERT(read < bufferLength, "processEosioUpdateAuth");
     buffer += read;
     bufferLength -= read;
 
     offset_update = sizeof(permisssion_level_t) + sizeof(uint16_t);
-    eos_assert(!__builtin_mul_overflow(offset_update, totalAccounts, &offset_update));
+    LEDGER_ASSERT(!__builtin_mul_overflow(offset_update, totalAccounts, &offset_update), "processEosioUpdateAuth");
 
-    eos_assert(offset_update < bufferLength);
+    LEDGER_ASSERT(offset_update < bufferLength, "processEosioUpdateAuth");
     buffer += offset_update;
     bufferLength -= offset_update;
 
-    eos_assert(!__builtin_add_overflow(totalAccounts, totalAccounts, &totalAccounts)); // totalAccounts *= 2
-    eos_assert(!__builtin_add_overflow(context->content->argumentCount, totalAccounts, &context->content->argumentCount));
+    LEDGER_ASSERT(!__builtin_add_overflow(totalAccounts, totalAccounts, &totalAccounts), "processEosioUpdateAuth"); // totalAccounts *= 2
+    LEDGER_ASSERT(!__builtin_add_overflow(context->content->argumentCount, totalAccounts, &context->content->argumentCount), "processEosioUpdateAuth");
 
     uint32_t totalWaits = 0;
     unpack_variant32(buffer, bufferLength, &totalWaits);
 
-    eos_assert(!__builtin_add_overflow(totalWaits, totalWaits, &totalWaits)); // totalWaits *= 2
-    eos_assert(!__builtin_add_overflow(context->content->argumentCount, totalWaits, &context->content->argumentCount));
+    LEDGER_ASSERT(!__builtin_add_overflow(totalWaits, totalWaits, &totalWaits), "processEosioUpdateAuth"); // totalWaits *= 2
+    LEDGER_ASSERT(!__builtin_add_overflow(context->content->argumentCount, totalWaits, &context->content->argumentCount), "processEosioUpdateAuth");
 }
 
 static void processEosioDeleteAuth(txProcessingContext_t *context) {
@@ -224,80 +215,49 @@ static void processEosioNewAccountAction(txProcessingContext_t *context) {
     // Read owner key threshold
     uint32_t threshold = 0;
     memmove(&threshold, buffer, sizeof(threshold));
-    if (threshold != 1) {
-        PRINTF("Owner Threshold should be 1");
-        THROW(EXCEPTION);
-    }
+    LEDGER_ASSERT(threshold == 1, "Owner Threshold should be 1");
     buffer += sizeof(threshold); bufferLength -= sizeof(threshold);
     
     uint32_t size = 0;
     uint32_t read = unpack_variant32(buffer, bufferLength, &size);
-    if (size != 1) {
-        PRINTF("Owner key must be 1");
-        THROW(EXCEPTION);
-    }
+    LEDGER_ASSERT(size == 1, "Owner key must be 1");
     buffer += read; bufferLength -= read;
     // Offset to key weight
     buffer += 1 + sizeof(public_key_t); bufferLength -= 1 + sizeof(public_key_t);
     uint16_t weight = 0;
     memmove(&weight, buffer, sizeof(weight));
-    if (weight != 1) {
-        PRINTF("Owner key weight must be 1");
-        THROW(EXCEPTION);
-    }
+    LEDGER_ASSERT(weight == 1, "Owner key weight must be 1");
     buffer += sizeof(weight); bufferLength -= sizeof(weight);
     
     read = unpack_variant32(buffer, bufferLength, &size);
-    if (size != 0) {
-        PRINTF("No accounts allowed");
-        THROW(EXCEPTION);
-    }
+    LEDGER_ASSERT(size == 0, "No accounts allowed");
     buffer += read; bufferLength -= read;
     read = unpack_variant32(buffer, bufferLength, &size);
-    if (size != 0) {
-        PRINTF("No delays allowed");
-        THROW(EXCEPTION);
-    }
+    LEDGER_ASSERT(size == 0, "No delays allowed");
     buffer += read; bufferLength -= read;
     
     // process Active authorization
     // -----------------------------------
     
     memmove(&threshold, buffer, sizeof(threshold));
-    if (threshold != 1) {
-        PRINTF("Active Threshold should be 1");
-        THROW(EXCEPTION);
-    }
+    LEDGER_ASSERT(threshold == 1, "Active Threshold should be 1");
     buffer += sizeof(threshold); bufferLength -= sizeof(threshold);
     
     read = unpack_variant32(buffer, bufferLength, &size);
-    if (size != 1) {
-        PRINTF("Active key must be 1");
-        THROW(EXCEPTION);
-    }
+    LEDGER_ASSERT(size == 1, "Active key must be 1");
     buffer += read; bufferLength -= read;
     // Offset to key weight
     buffer += 1 + sizeof(public_key_t); bufferLength -= 1 + sizeof(public_key_t);
     weight = 0;
     memmove(&weight, buffer, sizeof(weight));
-    if (weight != 1) {
-        PRINTF("Active key weight must be 1");
-        THROW(EXCEPTION);
-    }
+    LEDGER_ASSERT(weight == 1, "Active key weight must be 1");
     buffer += sizeof(weight); bufferLength -= sizeof(weight);
     
     read = unpack_variant32(buffer, bufferLength, &size);
-    if (size != 0) {
-        PRINTF("No accounts allowed");
-        THROW(EXCEPTION);
-    }
+    LEDGER_ASSERT(size == 0, "No accounts allowed");
     buffer += read; bufferLength -= read;
     unpack_variant32(buffer, bufferLength, &size);
-    if (size != 0) {
-        PRINTF("No delays allowed");
-        THROW(EXCEPTION);
-    }
-    
+    LEDGER_ASSERT(size == 0, "No delays allowed");
     context->content->argumentCount = 4;
 }
 
@@ -419,9 +379,7 @@ static void processField(txProcessingContext_t *context) {
                 ? context->commandLength
                 : context->currentFieldLength - context->currentFieldPos);
 
-        if (length > context->commandLength) {
-            THROW(EXCEPTION);
-        }
+        LEDGER_ASSERT(length <= context->commandLength, "processField");
         hashTxData(context, context->workBuffer, length);
 
         context->workBuffer += length;
@@ -449,15 +407,11 @@ static void processZeroSizeField(txProcessingContext_t *context) {
                 ? context->commandLength
                 : context->currentFieldLength - context->currentFieldPos);
 
-        if (length > context->commandLength) {
-            THROW(EXCEPTION);
-        }
+        LEDGER_ASSERT(length <= context->commandLength, "processZeroSizeField");
         hashTxData(context, context->workBuffer, length);
 
         // Store data into a buffer
-        if (length > sizeof(context->sizeBuffer) - context->currentFieldPos) {
-            THROW(EXCEPTION);
-        }
+        LEDGER_ASSERT(length <= sizeof(context->sizeBuffer) - context->currentFieldPos, "processZeroSizeField");
         memmove(context->sizeBuffer + context->currentFieldPos, context->workBuffer, length);
 
         context->workBuffer += length;
@@ -468,10 +422,7 @@ static void processZeroSizeField(txProcessingContext_t *context) {
     if (context->currentFieldPos == context->currentFieldLength) {
         uint32_t sizeValue = 0;
         unpack_variant32(context->sizeBuffer, context->currentFieldPos + 1, &sizeValue);
-        if (sizeValue != 0) {
-            PRINTF("processCtxFreeAction Action Number must be 0\n");
-            THROW(EXCEPTION);
-        }
+        LEDGER_ASSERT(sizeValue == 0, "processCtxFreeAction Action Number must be 0");
         // Reset size buffer
         memset(context->sizeBuffer, 0, sizeof(context->sizeBuffer));
 
@@ -494,15 +445,11 @@ static void processActionListSizeField(txProcessingContext_t *context) {
                 ? context->commandLength
                 : context->currentFieldLength - context->currentFieldPos);
 
-        if (length > context->commandLength) {
-            THROW(EXCEPTION);
-        }
+        LEDGER_ASSERT(length <= context->commandLength, "processActionListSizeField");
         hashTxData(context, context->workBuffer, length);
 
         // Store data into a buffer
-        if (length > sizeof(context->sizeBuffer) - context->currentFieldPos) {
-            THROW(EXCEPTION);
-        }
+        LEDGER_ASSERT(length <= sizeof(context->sizeBuffer) - context->currentFieldPos, "processActionListSizeField");
         memmove(context->sizeBuffer + context->currentFieldPos, context->workBuffer, length);
 
         context->workBuffer += length;
@@ -537,16 +484,12 @@ static void processActionAccount(txProcessingContext_t *context) {
                 ? context->commandLength
                 : context->currentFieldLength - context->currentFieldPos);
 
-        if (length > context->commandLength) {
-            THROW(EXCEPTION);
-        }
+        LEDGER_ASSERT(length <= context->commandLength, "processActionAccount");
         hashTxData(context, context->workBuffer, length);
         
         uint8_t *pContract = (uint8_t *)&context->contractName;
 
-        if (length > sizeof(context->contractName) - context->currentFieldPos) {
-            THROW(EXCEPTION);
-        }
+        LEDGER_ASSERT(length <= sizeof(context->sizeBuffer) - context->currentFieldPos, "processActionAccount");
         memmove(pContract + context->currentFieldPos, context->workBuffer, length);
 
         context->workBuffer += length;
@@ -575,15 +518,11 @@ static void processActionName(txProcessingContext_t *context) {
                 ? context->commandLength
                 : context->currentFieldLength - context->currentFieldPos);
 
-        if (length > context->commandLength) {
-            THROW(EXCEPTION);
-        }
+        LEDGER_ASSERT(length <= context->commandLength, "processActionName");
         hashTxData(context, context->workBuffer, length);
 
         uint8_t *pAction = (uint8_t *)&context->contractActionName;
-        if (length > sizeof(context->contractActionName) - context->currentFieldPos) {
-            THROW(EXCEPTION);
-        }
+        LEDGER_ASSERT(length <= sizeof(context->sizeBuffer) - context->currentFieldPos, "processActionName");
         memmove(pAction + context->currentFieldPos, context->workBuffer, length);
 
         context->workBuffer += length;
@@ -612,15 +551,11 @@ static void processAuthorizationListSizeField(txProcessingContext_t *context) {
                 ? context->commandLength
                 : context->currentFieldLength - context->currentFieldPos);
 
-        if (length > context->commandLength) {
-            THROW(EXCEPTION);
-        }
+        LEDGER_ASSERT(length <= context->commandLength, "processAuthorizationListSizeField");
         hashTxData(context, context->workBuffer, length);
 
         // Store data into a buffer
-        if (length > sizeof(context->sizeBuffer) - context->currentFieldPos) {
-            THROW(EXCEPTION);
-        }
+        LEDGER_ASSERT(length <= sizeof(context->sizeBuffer) - context->currentFieldPos, "processAuthorizationListSizeField");
         memmove(context->sizeBuffer + context->currentFieldPos, context->workBuffer, length);
 
         context->workBuffer += length;
@@ -652,9 +587,7 @@ static void processAuthorizationPermission(txProcessingContext_t *context) {
                 ? context->commandLength
                 : context->currentFieldLength - context->currentFieldPos);
 
-        if (length > context->commandLength) {
-            THROW(EXCEPTION);
-        }
+        LEDGER_ASSERT(length <= context->commandLength, "processAuthorizationPermission");
         hashTxData(context, context->workBuffer, length);
 
         context->workBuffer += length;
@@ -687,9 +620,7 @@ static void processUnknownActionDataSize(txProcessingContext_t *context) {
                 ? context->commandLength
                 : context->currentFieldLength - context->currentFieldPos);
 
-        if (length > context->commandLength) {
-            THROW(EXCEPTION);
-        }
+        LEDGER_ASSERT(length <= context->commandLength, "processUnknownActionDataSize");
         hashTxData(context, context->workBuffer, length);
         hashActionData(context, context->workBuffer, length);
 
@@ -716,9 +647,7 @@ static void processUnknownActionData(txProcessingContext_t *context) {
                 ? context->commandLength
                 : context->currentFieldLength - context->currentFieldPos);
 
-        if (length > context->commandLength) {
-            THROW(EXCEPTION);
-        }
+        LEDGER_ASSERT(length <= context->commandLength, "processUnknownActionData");
         hashTxData(context, context->workBuffer, length);
         hashActionData(context, context->workBuffer, length);
 
@@ -749,10 +678,7 @@ static void processUnknownActionData(txProcessingContext_t *context) {
  * Process current action data field and store in into data buffer.
 */
 static void processActionData(txProcessingContext_t *context) {
-    if (context->currentFieldLength > sizeof(context->actionDataBuffer) - 1) {
-        PRINTF("processActionData data overflow\n");
-        THROW(EXCEPTION);
-    }
+    LEDGER_ASSERT(context->currentFieldLength <= sizeof(context->actionDataBuffer) - 1, "processActionData data overflow");
 
     if (context->currentFieldPos < context->currentFieldLength) {
         uint32_t length = 
@@ -811,7 +737,7 @@ static void processActionData(txProcessingContext_t *context) {
                 processEosioNewAccountAction(context);
                 break;
             default:
-                THROW(EXCEPTION);
+                LEDGER_ASSERT(false, "processActionData");
             }
         }
         
@@ -930,7 +856,7 @@ static parserStatus_e processTxInternal(txProcessingContext_t *context) {
                 processUnknownActionData(context);
             } else {
                 PRINTF("UNKNOWN ACTION");
-                THROW(EXCEPTION);
+                return STREAM_FAULT;
             }
             break;
 
@@ -998,28 +924,15 @@ static parserStatus_e processTxInternal(txProcessingContext_t *context) {
  * CTX_FREE_ACTION_DATA_NUMBER theoretically is not fixed due to serialization. Ledger accepts only 0 as encoded value.
 */
 parserStatus_e parseTx(txProcessingContext_t *context, uint8_t *buffer, uint32_t length) {
-    parserStatus_e result;
 #ifdef DEBUG_APP
     // Do not catch exceptions.
     context->workBuffer = buffer;
     context->commandLength = length;
-    result = processTxInternal(context);
 #else
-    BEGIN_TRY {
-        TRY {
-            if (context->commandLength == 0) {
-                context->workBuffer = buffer;
-                context->commandLength = length;
-            }
-            result = processTxInternal(context);
-        }
-        CATCH_OTHER(e) {
-            result = STREAM_FAULT;
-        }
-        FINALLY {
-        }
+    if (context->commandLength == 0) {
+        context->workBuffer = buffer;
+        context->commandLength = length;
     }
-    END_TRY;
 #endif
-    return result;
+    return processTxInternal(context);
 }

@@ -26,9 +26,7 @@
 static const char* charmap = ".12345abcdefghijklmnopqrstuvwxyz";
 
 name_t buffer_to_name_type(uint8_t *in, uint32_t size) {
-    if (size < 8) {
-        THROW(EXCEPTION_OVERFLOW);
-    }
+    LEDGER_ASSERT(size >= 8, "buffer_to_name_type Overflow");
 
     name_t value;
     memmove(&value, in, 8);
@@ -37,9 +35,7 @@ name_t buffer_to_name_type(uint8_t *in, uint32_t size) {
 }
 
 uint8_t name_to_string(name_t value, char *out, uint32_t size) {
-    if (size < 13) {
-        THROW(EXCEPTION_OVERFLOW);
-    }
+    LEDGER_ASSERT(size >= 13, "name_to_string Overflow");
 
     uint32_t i = 0;
     uint32_t actual_size = 13;
@@ -95,9 +91,7 @@ uint64_t symbol_precision(symbol_t sym) {
 uint8_t symbol_to_string(symbol_t sym, char *out, uint32_t size) {
     sym >>= 8;
 
-    if (size < 8) {
-        THROW(EXCEPTION_OVERFLOW);
-    }
+    LEDGER_ASSERT(size >= 8, "symbol_to_string Overflow");
 
     uint8_t i = 0;
     char tmp[8] = { 0 };
@@ -115,9 +109,7 @@ uint8_t symbol_to_string(symbol_t sym, char *out, uint32_t size) {
 
 uint8_t asset_to_string(asset_t *asset, char *out, uint32_t size) {
     UNUSED(size);
-    if (asset == NULL) {
-        THROW(INVALID_PARAMETER);
-    }
+    LEDGER_ASSERT(asset != NULL, "asset_to_string Invalid Parameter");
 
     int64_t p = (int64_t)symbol_precision(asset->symbol);
     int64_t p10 = 1;
@@ -173,12 +165,9 @@ uint32_t unpack_variant32(uint8_t *in, uint32_t length, variant32_t *value) {
 }
 
 uint32_t public_key_to_wif(uint8_t *publicKey, uint32_t keyLength, char *out, uint32_t outLength) {
-    if (publicKey == NULL || keyLength < 33) {
-        THROW(INVALID_PARAMETER);
-    }
-    if (outLength < 40) {
-        THROW(EXCEPTION_OVERFLOW);
-    }
+    LEDGER_ASSERT(publicKey != NULL, "public_key_to_wif Invalid Parameter");
+    LEDGER_ASSERT(keyLength >= 33, "public_key_to_wif Invalid Parameter");
+    LEDGER_ASSERT(outLength >= 40, "public_key_to_wif Overflow");
 
     uint8_t temp[33];
     // is even?
@@ -188,12 +177,8 @@ uint32_t public_key_to_wif(uint8_t *publicKey, uint32_t keyLength, char *out, ui
 }
 
 uint32_t compressed_public_key_to_wif(uint8_t *publicKey, uint32_t keyLength, char *out, uint32_t outLength) {
-    if (keyLength < 33) {
-        THROW(INVALID_PARAMETER);
-    }
-    if (outLength < 40) {
-        THROW(EXCEPTION_OVERFLOW);
-    }
+    LEDGER_ASSERT(keyLength >= 33, "compressed_public_key_to_wif Invalid Parameter");
+    LEDGER_ASSERT(outLength >= 40, "compressed_public_key_to_wif Overflow");
     
     uint8_t temp[37];
     memset(temp, 0, sizeof(temp));
@@ -211,8 +196,6 @@ uint32_t compressed_public_key_to_wif(uint8_t *publicKey, uint32_t keyLength, ch
     out[2] = 'S';
     uint32_t addressLen = outLength - 3;
     b58enc(temp, sizeof(temp), out + 3, &addressLen);
-    if (addressLen + 3 >= outLength) {
-        THROW(EXCEPTION_OVERFLOW);
-    }
+    LEDGER_ASSERT(addressLen + 3 < outLength, "compressed_public_key_to_wif Overflow");
     return addressLen + 3;
 }

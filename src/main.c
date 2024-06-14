@@ -24,6 +24,7 @@
 #include "ux.h"
 #include "ledger_assert.h"
 #include "offsets.h"
+#include "errors.h"
 
 #include "eos_utils.h"
 #include "eos_stream.h"
@@ -156,7 +157,7 @@ uint32_t get_public_key_and_set_result()
     return tx;
 }
 
-void handleGetPublicKey(uint8_t p1, uint8_t p2, uint8_t *dataBuffer,
+uint32_t handleGetPublicKey(uint8_t p1, uint8_t p2, uint8_t *dataBuffer,
                         uint16_t dataLength, volatile unsigned int *flags,
                         volatile unsigned int *tx)
 {
@@ -170,15 +171,15 @@ void handleGetPublicKey(uint8_t p1, uint8_t p2, uint8_t *dataBuffer,
     if ((bip32PathLength < 0x01) || (bip32PathLength > MAX_BIP32_PATH))
     {
         PRINTF("Invalid path\n");
-        THROW(0x6a80);
+        return 0x6a80;
     }
     if ((p1 != P1_CONFIRM) && (p1 != P1_NON_CONFIRM))
     {
-        THROW(0x6B00);
+        return 0x6B00;
     }
     if ((p2 != P2_CHAINCODE) && (p2 != P2_NO_CHAINCODE))
     {
-        THROW(0x6B00);
+        return 0x6B00;
     }
     for (i = 0; i < bip32PathLength; i++)
     {
@@ -205,7 +206,6 @@ void handleGetPublicKey(uint8_t p1, uint8_t p2, uint8_t *dataBuffer,
     if (p1 == P1_NON_CONFIRM)
     {
         *tx = get_public_key_and_set_result();
-        THROW(0x9000);
     }
     else
     {
@@ -213,9 +213,10 @@ void handleGetPublicKey(uint8_t p1, uint8_t p2, uint8_t *dataBuffer,
 
         *flags |= IO_ASYNCH_REPLY;
     }
+    return SWO_SUCCESS;
 }
 
-void handleGetAppConfiguration(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
+uint32_t handleGetAppConfiguration(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
                                uint16_t dataLength,
                                volatile unsigned int *flags,
                                volatile unsigned int *tx)
@@ -230,7 +231,7 @@ void handleGetAppConfiguration(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
     G_io_apdu_buffer[2] = MINOR_VERSION;
     G_io_apdu_buffer[3] = PATCH_VERSION;
     *tx = 4;
-    THROW(0x9000);
+    return SWO_SUCCESS;
 }
 
 uint32_t sign_hash_and_set_result(void) 
@@ -301,7 +302,7 @@ uint32_t sign_hash_and_set_result(void)
     return tx;
 }
 
-void handleSign(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
+uint32_t handleSign(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
                 uint16_t dataLength, volatile unsigned int *flags,
                 volatile unsigned int *tx)
 {
@@ -314,7 +315,7 @@ void handleSign(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
             (tmpCtx.transactionContext.pathLength > MAX_BIP32_PATH))
         {
             PRINTF("Invalid path\n");
-            THROW(0x6a80);
+            return 0x6a80;
         }
         workBuffer++;
         dataLength--;
@@ -330,16 +331,16 @@ void handleSign(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
     }
     else if (p1 != P1_MORE)
     {
-        THROW(0x6B00);
+        return 0x6B00;
     }
     if (p2 != 0)
     {
-        THROW(0x6B00);
+        return 0x6B00;
     }
     if (txProcessingCtx.state == TLV_NONE)
     {
         PRINTF("Parser not initialized\n");
-        THROW(0x6985);
+        return 0x6985;
     }
 
     txResult = parseTx(&txProcessingCtx, workBuffer, dataLength);
@@ -355,90 +356,54 @@ void handleSign(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
         break;
     case STREAM_FINISHED:
         *tx = sign_hash_and_set_result();
-        THROW(0x9000);
+        break;
     case STREAM_PROCESSING:
-        THROW(0x9000);
+        break;
     case STREAM_FAULT:
-        THROW(0x6A80);
+        return 0x6A80;
     default:
         PRINTF("Unexpected parser status\n");
-        THROW(0x6A80);
+        return 0x6A80;
     }
+    return SWO_SUCCESS;
 }
 
-void handleApdu(volatile unsigned int *flags, volatile unsigned int *tx)
+uint32_t handleApdu(volatile unsigned int *flags, volatile unsigned int *tx)
 {
-    unsigned short sw = 0;
+    uint32_t sw = EXCEPTION;
 
-    BEGIN_TRY
-    {
-        TRY
-        {
-            if (G_io_apdu_buffer[OFFSET_CLA] != CLA)
-            {
-                THROW(0x6E00);
-            }
+    if (G_io_apdu_buffer[OFFSET_CLA] != CLA) {
+        return 0x6E00;
+    }
 
-            switch (G_io_apdu_buffer[OFFSET_INS])
-            {
-            case INS_GET_PUBLIC_KEY:
-                handleGetPublicKey(G_io_apdu_buffer[OFFSET_P1],
-                                   G_io_apdu_buffer[OFFSET_P2],
-                                   G_io_apdu_buffer + OFFSET_CDATA,
-                                   G_io_apdu_buffer[OFFSET_LC], flags, tx);
-                break;
+    switch (G_io_apdu_buffer[OFFSET_INS]) {
+    case INS_GET_PUBLIC_KEY:
+        sw = handleGetPublicKey(G_io_apdu_buffer[OFFSET_P1],
+                            G_io_apdu_buffer[OFFSET_P2],
+                            G_io_apdu_buffer + OFFSET_CDATA,
+                            G_io_apdu_buffer[OFFSET_LC], flags, tx);
+        break;
 
-            case INS_SIGN:
-                handleSign(G_io_apdu_buffer[OFFSET_P1],
-                           G_io_apdu_buffer[OFFSET_P2],
-                           G_io_apdu_buffer + OFFSET_CDATA,
-                           G_io_apdu_buffer[OFFSET_LC], flags, tx);
-                break;
-
-            case INS_GET_APP_CONFIGURATION:
-                handleGetAppConfiguration(
-                    G_io_apdu_buffer[OFFSET_P1], 
+    case INS_SIGN:
+        sw = handleSign(G_io_apdu_buffer[OFFSET_P1],
                     G_io_apdu_buffer[OFFSET_P2],
                     G_io_apdu_buffer + OFFSET_CDATA,
                     G_io_apdu_buffer[OFFSET_LC], flags, tx);
-                break;
+        break;
 
-            default:
-                THROW(0x6D00);
-                break;
-            }
-        }
-        CATCH(EXCEPTION_IO_RESET)
-        {
-            THROW(EXCEPTION_IO_RESET);
-        }
-        CATCH_OTHER(e)
-        {
-            switch (e & 0xF000)
-            {
-            case 0x6000:
-                // Wipe the transaction context and report the exception
-                sw = e;
-                break;
-            case 0x9000:
-                // All is well
-                sw = e;
-                break;
-            default:
-                // Internal error
-                sw = 0x6800 | (e & 0x7FF);
-                break;
-            }
-            // Unexpected exception => report
-            G_io_apdu_buffer[*tx] = sw >> 8;
-            G_io_apdu_buffer[*tx + 1] = sw;
-            *tx += 2;
-        }
-        FINALLY
-        {
-        }
+    case INS_GET_APP_CONFIGURATION:
+        sw = handleGetAppConfiguration(
+            G_io_apdu_buffer[OFFSET_P1], 
+            G_io_apdu_buffer[OFFSET_P2],
+            G_io_apdu_buffer + OFFSET_CDATA,
+            G_io_apdu_buffer[OFFSET_LC], flags, tx);
+        break;
+
+    default:
+        sw = 0x6D00;
+        break;
     }
-    END_TRY;
+    return sw;
 }
 
 void app_main(void)
@@ -458,7 +423,7 @@ void app_main(void)
     // APDU injection faults.
     for (;;)
     {
-        volatile unsigned short sw = 0;
+        volatile uint32_t sw = 0;
 
         BEGIN_TRY
         {
@@ -472,27 +437,19 @@ void app_main(void)
 
                 // no apdu received, well, reset the session, and reset the
                 // bootloader configuration
-                if (rx == 0)
-                {
-                    THROW(0x6982);
+                if (rx == 0) {
+                    sw = 0x6982;
+                } else {
+                    sw = handleApdu(&flags, &tx);
                 }
-
-                handleApdu(&flags, &tx);
-            }
-            CATCH(EXCEPTION_IO_RESET)
-            {
-                THROW(EXCEPTION_IO_RESET);
             }
             CATCH_OTHER(e)
             {
                 switch (e & 0xF000)
                 {
+                case EXCEPTION_IO_RESET:
                 case 0x6000:
                     // Wipe the transaction context and report the exception
-                    sw = e;
-                    break;
-                case 0x9000:
-                    // All is well
                     sw = e;
                     break;
                 default:
@@ -500,18 +457,15 @@ void app_main(void)
                     sw = 0x6800 | (e & 0x7FF);
                     break;
                 }
+            }
+            FINALLY
+            {
                 // Unexpected exception => report
                 G_io_apdu_buffer[tx] = sw >> 8;
                 G_io_apdu_buffer[tx + 1] = sw;
                 tx += 2;
             }
-            FINALLY
-            {
-            }
         }
         END_TRY;
     }
-
-    // return_to_dashboard:
-    return;
 }

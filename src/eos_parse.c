@@ -22,6 +22,7 @@
 #include "eos_utils.h"
 #include <stdbool.h>
 #include <string.h>
+#include "ledger_assert.h"
 
 void printString(const char in[], const char fieldName[], actionArgument_t *arg) {
     uint32_t inLength = strlen(in);
@@ -35,15 +36,9 @@ void printString(const char in[], const char fieldName[], actionArgument_t *arg)
 }
 
 void parseNameField(uint8_t *in, uint32_t inLength, const char fieldName[], actionArgument_t *arg, uint32_t *read, uint32_t *written) {
-    if (inLength < sizeof(name_t)) {
-        PRINTF("parseActionData Insufficient buffer\n");
-        THROW(EXCEPTION);
-    }
+    LEDGER_ASSERT(inLength >= sizeof(name_t), "parseActionData Insufficient buffer");
     uint32_t labelLength = strlen(fieldName);
-    if (labelLength > sizeof(arg->label)) {
-        PRINTF("parseActionData Label too long\n");
-        THROW(EXCEPTION);
-    }
+    LEDGER_ASSERT(labelLength <= sizeof(arg->label), "parseActionData Label too long");
 
     memset(arg->label, 0, sizeof(arg->label));
     memset(arg->data, 0, sizeof(arg->data));
@@ -57,15 +52,9 @@ void parseNameField(uint8_t *in, uint32_t inLength, const char fieldName[], acti
 }
 
 void parsePublicKeyField(uint8_t *in, uint32_t inLength, const char fieldName[], actionArgument_t *arg, uint32_t *read, uint32_t *written) {
-    if (inLength < 33) {
-        PRINTF("parseActionData Insufficient buffer\n");
-        THROW(EXCEPTION);
-    }
+    LEDGER_ASSERT(inLength >= 33, "parseActionData Insufficient buffer");
     uint32_t labelLength = strlen(fieldName);
-    if (labelLength > sizeof(arg->label)) {
-        PRINTF("parseActionData Label too long\n");
-        THROW(EXCEPTION);
-    }
+    LEDGER_ASSERT(labelLength <= sizeof(arg->label), "parseActionData Label too long");
 
     memset(arg->label, 0, sizeof(arg->label));
     memset(arg->data, 0, sizeof(arg->data));
@@ -78,15 +67,9 @@ void parsePublicKeyField(uint8_t *in, uint32_t inLength, const char fieldName[],
 }
 
 void parseUint16Field(uint8_t *in, uint32_t inLength, const char fieldName[], actionArgument_t *arg, uint32_t *read, uint32_t *written) {
-    if (inLength < sizeof(uint16_t)) {
-        PRINTF("parseActionData Insufficient buffer\n");
-        THROW(EXCEPTION);
-    }
+    LEDGER_ASSERT(inLength >= sizeof(uint16_t), "parseActionData Insufficient buffer");
     uint32_t labelLength = strlen(fieldName);
-    if (labelLength > sizeof(arg->label)) {
-        PRINTF("parseActionData Label too long\n");
-        THROW(EXCEPTION);
-    }
+    LEDGER_ASSERT(labelLength <= sizeof(arg->label), "parseActionData Label too long");
     
     memset(arg->label, 0, sizeof(arg->label));
     memset(arg->data, 0, sizeof(arg->data));
@@ -101,15 +84,9 @@ void parseUint16Field(uint8_t *in, uint32_t inLength, const char fieldName[], ac
 }
 
 void parseUint32Field(uint8_t *in, uint32_t inLength, const char fieldName[], actionArgument_t *arg, uint32_t *read, uint32_t *written) {
-    if (inLength < sizeof(uint32_t)) {
-        PRINTF("parseActionData Insufficient buffer\n");
-        THROW(EXCEPTION);
-    }
+    LEDGER_ASSERT(inLength >= sizeof(uint32_t), "parseActionData Insufficient buffer");
     uint32_t labelLength = strlen(fieldName);
-    if (labelLength > sizeof(arg->label)) {
-        PRINTF("parseActionData Label too long\n");
-        THROW(EXCEPTION);
-    }
+    LEDGER_ASSERT(labelLength <= sizeof(arg->label), "parseActionData Label too long");
     
     memset(arg->label, 0, sizeof(arg->label));
     memset(arg->data, 0, sizeof(arg->data));
@@ -124,16 +101,10 @@ void parseUint32Field(uint8_t *in, uint32_t inLength, const char fieldName[], ac
 }
 
 void parseUInt64Field(uint8_t *in, uint32_t inLength, const char fieldName[], actionArgument_t *arg, uint32_t *read, uint32_t *written) {
-    if (inLength < sizeof(uint64_t)) {
-        PRINTF("parseActionData Insufficient buffer\n");
-        THROW(EXCEPTION);
-    }
+    LEDGER_ASSERT(inLength >= sizeof(uint64_t), "parseActionData Insufficient buffer");
     uint32_t labelLength = strlen(fieldName);
-    if (labelLength > sizeof(arg->label)) {
-        PRINTF("parseActionData Label too long\n");
-        THROW(EXCEPTION);
-    }
-    
+    LEDGER_ASSERT(labelLength <= sizeof(arg->label), "parseActionData Label too long");
+
     memset(arg->label, 0, sizeof(arg->label));
     memset(arg->data, 0, sizeof(arg->data));
     
@@ -147,16 +118,9 @@ void parseUInt64Field(uint8_t *in, uint32_t inLength, const char fieldName[], ac
 }
 
 void parseAssetField(uint8_t *in, uint32_t inLength, const char fieldName[], actionArgument_t *arg, uint32_t *read, uint32_t *written) {
-    if (inLength < sizeof(asset_t)) {
-        PRINTF("parseActionData Insufficient buffer\n");
-        THROW(EXCEPTION);
-    }
-
+    LEDGER_ASSERT(inLength >= sizeof(asset_t), "parseActionData Insufficient buffer");
     uint32_t labelLength = strlen(fieldName);
-    if (labelLength > sizeof(arg->label)) {
-        PRINTF("parseActionData Label too long\n");
-        THROW(EXCEPTION);
-    }
+    LEDGER_ASSERT(labelLength <= sizeof(arg->label), "parseActionData Label too long");
 
     memset(arg->label, 0, sizeof(arg->label));
     memset(arg->data, 0, sizeof(arg->data));
@@ -172,10 +136,7 @@ void parseAssetField(uint8_t *in, uint32_t inLength, const char fieldName[], act
 
 void parseStringField(uint8_t *in, uint32_t inLength, const char fieldName[], actionArgument_t *arg, uint32_t *read, uint32_t *written) {
     uint32_t labelLength = strlen(fieldName);
-    if (labelLength > sizeof(arg->label)) {
-        PRINTF("parseActionData Label too long\n");
-        THROW(EXCEPTION);
-    }
+    LEDGER_ASSERT(labelLength <= sizeof(arg->label), "parseActionData Label too long");
 
     memset(arg->label, 0, sizeof(arg->label));
     memset(arg->data, 0, sizeof(arg->data));
@@ -184,15 +145,8 @@ void parseStringField(uint8_t *in, uint32_t inLength, const char fieldName[], ac
 
     uint32_t fieldLength = 0;
     uint32_t readFromBuffer = unpack_variant32(in, inLength, &fieldLength);
-    if (fieldLength > sizeof(arg->data) - 1) {
-        PRINTF("parseActionData Insufficient bufferg\n");
-        THROW(EXCEPTION);
-    } 
-
-    if (inLength < fieldLength) {
-        PRINTF("parseActionData Insufficient buffer\n");
-        THROW(EXCEPTION);
-    }
+    LEDGER_ASSERT(fieldLength <= sizeof(arg->data) - 1, "parseActionData Insufficient buffer");
+    LEDGER_ASSERT(inLength >= fieldLength, "parseActionData Insufficient buffer");
 
     in += readFromBuffer;
 
@@ -209,10 +163,7 @@ void parsePermissionField(uint8_t *in, uint32_t inLength, const char fieldName[]
     strlcat(arg->data, "@", sizeof(arg->data));
     
     in += *read; inLength -= *read;
-    if (inLength < sizeof(name_t)) {
-        PRINTF("parseActionData Insufficient buffer\n");
-        THROW(EXCEPTION);
-    }
+    LEDGER_ASSERT(inLength >= sizeof(name_t), "parseActionData Insufficient buffer");
     name_t name = buffer_to_name_type(in, sizeof(name_t));
     
     *written = name_to_string(name, arg->data + accountWrittenLength + 1, sizeof(arg->data) - accountWrittenLength - 1) + accountWrittenLength;
