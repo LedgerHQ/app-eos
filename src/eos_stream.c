@@ -488,7 +488,7 @@ static void processActionListSizeField(txProcessingContext_t *context) {
     if (context->currentFieldPos == context->currentFieldLength) {
         unpack_variant32(context->sizeBuffer,
                          context->currentFieldPos + 1,
-                         &context->currentActionNumer);
+                         &context->currentActionNumber);
         context->currentActionIndex = 0;
 
         // Reset size buffer
@@ -496,7 +496,7 @@ static void processActionListSizeField(txProcessingContext_t *context) {
 
         context->state++;
         context->processingField = false;
-        if (context->currentActionNumer > 1) {
+        if (context->currentActionNumber > 1) {
             context->confirmProcessing = true;
         }
     }
@@ -692,7 +692,7 @@ static void processUnknownActionData(txProcessingContext_t *context) {
 
         processUnknownAction(context);
 
-        if (++context->currentActionIndex < context->currentActionNumer) {
+        if (++context->currentActionIndex < context->currentActionNumber) {
             context->state = TLV_ACTION_ACCOUNT;
         } else {
             context->state = TLV_TX_EXTENSION_LIST_SIZE;
@@ -772,7 +772,7 @@ static void processActionData(txProcessingContext_t *context) {
             }
         }
 
-        if (++context->currentActionIndex < context->currentActionNumer) {
+        if (++context->currentActionIndex < context->currentActionNumber) {
             context->state = TLV_ACTION_ACCOUNT;
         } else {
             context->state = TLV_TX_EXTENSION_LIST_SIZE;

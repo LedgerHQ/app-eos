@@ -86,29 +86,7 @@ unsigned int user_action_tx_cancel(void) {
     return 0;
 }
 
-void user_action_single_action_sign_flow_ok(void) {
-    parserStatus_e txResult = parseTx(&txProcessingCtx, NULL, 0);
-    switch (txResult) {
-        case STREAM_ACTION_READY:
-            ui_display_single_action_sign_flow();
-            break;
-        case STREAM_PROCESSING:
-            io_exchange_with_code(0x9000, 0);
-            ui_display_action_sign_done(STREAM_PROCESSING, true);
-            break;
-        case STREAM_FINISHED:
-            io_exchange_with_code(0x9000, sign_hash_and_set_result());
-            ui_display_action_sign_done(STREAM_FINISHED, true);
-            break;
-        default:
-            io_exchange_with_code(0x6A80, 0);
-            // Display back the original UX
-            ui_idle();
-            break;
-    }
-}
-
-void user_action_multipls_action_sign_flow_ok(void) {
+void user_action_sign_flow_ok(void) {
     parserStatus_e txResult = parseTx(&txProcessingCtx, NULL, 0);
     switch (txResult) {
         case STREAM_ACTION_READY:

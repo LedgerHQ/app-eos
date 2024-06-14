@@ -43,5 +43,4 @@ extern sharedContext_t tmpCtx;
 unsigned int user_action_tx_cancel(void);
 unsigned int user_action_address_ok(void);
 unsigned int user_action_address_cancel(void);
-void user_action_single_action_sign_flow_ok(void);
-void user_action_multipls_action_sign_flow_ok(void);
+void user_action_sign_flow_ok(void);

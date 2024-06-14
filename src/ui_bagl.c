@@ -216,7 +216,7 @@ UX_STEP_INIT(ux_init_right_border, NULL, NULL, { display_next_state(STATE_RIGHT_
 
 UX_STEP_CB(ux_single_action_sign_flow_7_step,
            pbb,
-           user_action_single_action_sign_flow_ok(),
+           user_action_sign_flow_ok(),
            {
                &C_icon_validate_14,
                confirm_text1,
@@ -273,7 +273,7 @@ void ui_display_single_action_sign_flow(void) {
     ux_step = 0;
     ux_step_count = txContent.argumentCount;
 
-    if (txProcessingCtx.currentActionNumer > 1) {
+    if (txProcessingCtx.currentActionNumber > 1) {
         snprintf(confirmLabel,
                  sizeof(confirmLabel),
                  "Action #%d",
@@ -282,7 +282,7 @@ void ui_display_single_action_sign_flow(void) {
         strlcpy(confirmLabel, "Transaction", sizeof(confirmLabel));
     }
 
-    if (txProcessingCtx.currentActionIndex == txProcessingCtx.currentActionNumer) {
+    if (txProcessingCtx.currentActionIndex == txProcessingCtx.currentActionNumber) {
         strlcpy(confirm_text1, "Sign", sizeof(confirm_text1));
         strlcpy(confirm_text2, "transaction", sizeof(confirm_text2));
     } else {
@@ -317,7 +317,7 @@ UX_FLOW_DEF_NOCB(ux_multiple_action_sign_flow_2_step,
                  });
 UX_FLOW_DEF_VALID(ux_multiple_action_sign_flow_3_step,
                   pbb,
-                  user_action_multipls_action_sign_flow_ok(),
+                  user_action_sign_flow_ok(),
                   {&C_icon_validate_14, "Continue", "review"});
 UX_FLOW_DEF_VALID(ux_multiple_action_sign_flow_4_step,
                   pbb,
@@ -338,7 +338,7 @@ void ui_display_multiple_action_sign_flow(void) {
     snprintf(actionCounter,
              sizeof(actionCounter),
              "%d actions",
-             txProcessingCtx.currentActionNumer);
+             txProcessingCtx.currentActionNumber);
     ux_flow_init(0, ux_multiple_action_sign_flow, NULL);
 }
 
