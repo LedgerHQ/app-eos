@@ -73,7 +73,7 @@ void ui_idle(void) {
     infosList.infoContents = INFO_CONTENTS;
 
     nbgl_useCaseHomeAndSettings(APPNAME,
-                                &C_stax_app_eos_64px,
+                                &C_app_eos_64px,
                                 NULL,
                                 INIT_HOME_PAGE,
                                 &settingContents,
@@ -95,7 +95,7 @@ static void display_address_callback(bool confirm) {
 void ui_display_public_key_flow(void) {
     nbgl_useCaseAddressReview(tmpCtx.publicKeyContext.address,
                               NULL,
-                              &C_stax_app_eos_64px,
+                              &C_app_eos_64px,
                               "Verify Eos address",
                               NULL,
                               display_address_callback);
@@ -155,7 +155,7 @@ static nbgl_contentTagValue_t* get_multi_action_review_pair(uint8_t index) {
                  txProcessingCtx.currentActionNumber);
         pair.value = review_action;
         pair.centeredInfo = 1;
-        pair.valueIcon = &C_stax_app_eos_64px;
+        pair.valueIcon = &C_app_eos_64px;
         return &pair;
     }
     return get_single_action_review_pair(index - 1);
@@ -190,7 +190,7 @@ void ui_display_single_action_sign_flow(void) {
 
         nbgl_useCaseReview(TYPE_TRANSACTION,
                            &pairList,
-                           &C_stax_app_eos_64px,
+                           &C_app_eos_64px,
                            "Review transaction",
                            NULL,
                            "Sign transaction",
@@ -223,7 +223,7 @@ void ui_display_multiple_action_sign_flow(void) {
              "With %d actions",
              txProcessingCtx.currentActionNumber);
     nbgl_useCaseReviewStreamingStart(TYPE_TRANSACTION,
-                                     &C_stax_app_eos_64px,
+                                     &C_app_eos_64px,
                                      "Review transaction",
                                      review_subtitle,
                                      review_choice_single);
