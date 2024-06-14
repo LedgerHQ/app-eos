@@ -5,6 +5,9 @@ from ragger.backend.interface import RaisePolicy
 from ragger.bip import pack_derivation_path
 from ragger.navigator import NavInsID
 from ragger.utils import split_message
+from ragger.backend import BackendInterface
+from ragger.firmware import Firmware
+from ragger.navigator.navigation_scenario import NavigateWithScenario
 
 from apps.eos import EosClient, ErrorType, MAX_CHUNK_SIZE
 from apps.eos_transaction_builder import Transaction
@@ -20,27 +23,6 @@ def load_transaction_from_file(transaction_filename):
     return Transaction().encode(obj)
 
 
-def check_transaction(test_name, firmware, backend, navigator, transaction_filename):
-    signing_digest, message = load_transaction_from_file(transaction_filename)
-    client = EosClient(backend)
-    with client.send_async_sign_message(EOS_PATH, message):
-        if firmware.device.startswith("nano"):
-            navigator.navigate_until_text_and_compare(NavInsID.RIGHT_CLICK,
-                                                      [NavInsID.BOTH_CLICK],
-                                                      "Sign",
-                                                      ROOT_SCREENSHOT_PATH,
-                                                      test_name)
-        else:
-            navigator.navigate_until_text_and_compare(NavInsID.USE_CASE_REVIEW_TAP,
-                                                      [NavInsID.USE_CASE_REVIEW_CONFIRM,
-                                                       NavInsID.USE_CASE_STATUS_DISMISS],
-                                                      "Hold to sign",
-                                                      ROOT_SCREENSHOT_PATH,
-                                                      test_name)
-    response = client.get_async_response().data
-    client.verify_signature(EOS_PATH, signing_digest, response)
-
-
 # Remove corner case transaction that are handled separately
 transactions = list(CORPUS_FILES)
 transactions.remove("transaction_newaccount.json")
@@ -48,36 +30,43 @@ transactions.remove("transaction_unknown.json")
 
 
 @pytest.mark.parametrize("transaction_filename", transactions)
-def test_sign_transaction_accepted(test_name, firmware, backend, navigator, transaction_filename):
+def test_sign_transaction_accepted(test_name: str,
+                                   firmware: Firmware,
+                                   backend: BackendInterface,
+                                   scenario_navigator: NavigateWithScenario,
+                                   transaction_filename: str):
     folder_name = test_name + "/" + transaction_filename.replace(".json", "")
-    check_transaction(folder_name, firmware, backend, navigator, transaction_filename)
+
+    signing_digest, message = load_transaction_from_file(transaction_filename)
+    client = EosClient(backend)
+    if firmware.is_nano:
+        end_text = "^Sign$"
+    else:
+        end_text = "^Hold to sign$"
+    with client.send_async_sign_message(EOS_PATH, message):
+        scenario_navigator.review_approve(test_name=folder_name, custom_screen_text=end_text)
+    response = client.get_async_response().data
+    client.verify_signature(EOS_PATH, signing_digest, response)
 
 
-def test_sign_transaction_refused(test_name, firmware, backend, navigator):
+def test_sign_transaction_refused(test_name: str,
+                                  firmware: Firmware,
+                                  backend: BackendInterface,
+                                  scenario_navigator: NavigateWithScenario):
     _, message = load_transaction_from_file("transaction.json")
     client = EosClient(backend)
-    if firmware.device.startswith("nano"):
+    backend.raise_policy = RaisePolicy.RAISE_NOTHING
+    if firmware.is_nano:
+        end_text = "^Cancel$"
         with client.send_async_sign_message(EOS_PATH, message):
-            backend.raise_policy = RaisePolicy.RAISE_NOTHING
-            navigator.navigate_until_text_and_compare(NavInsID.RIGHT_CLICK,
-                                                      [NavInsID.BOTH_CLICK],
-                                                      "Cancel",
-                                                      ROOT_SCREENSHOT_PATH,
-                                                      test_name)
+            scenario_navigator.review_reject(test_name=test_name, custom_screen_text=end_text)
         rapdu = client.get_async_response()
         assert rapdu.status == ErrorType.USER_CANCEL
         assert len(rapdu.data) == 0
     else:
         for i in range(4):
-            instructions = [NavInsID.USE_CASE_REVIEW_TAP] * i
-            instructions += [NavInsID.USE_CASE_REVIEW_REJECT,
-                             NavInsID.USE_CASE_CHOICE_CONFIRM,
-                             NavInsID.USE_CASE_STATUS_DISMISS]
             with client.send_async_sign_message(EOS_PATH, message):
-                backend.raise_policy = RaisePolicy.RAISE_NOTHING
-                navigator.navigate_and_compare(ROOT_SCREENSHOT_PATH,
-                                               test_name + f"/part{i}",
-                                               instructions)
+                scenario_navigator.review_reject(test_name=test_name + f"/part{i}")
             rapdu = client.get_async_response()
             assert rapdu.status == ErrorType.USER_CANCEL
             assert len(rapdu.data) == 0
@@ -104,8 +93,7 @@ def test_sign_transaction_newaccount_accepted(test_name, firmware, backend, navi
     if firmware.device.startswith("nano"):
         instructions = get_nano_review_instructions(2) + get_nano_review_instructions(7)
     else:
-        instructions = [NavInsID.USE_CASE_REVIEW_TAP] * 4
-        instructions.append(NavInsID.USE_CASE_REVIEW_CONFIRM)
+        instructions = [NavInsID.USE_CASE_REVIEW_TAP] * 5
     with client.send_async_sign_message_full(messages[0], True):
         navigator.navigate_and_compare(ROOT_SCREENSHOT_PATH,
                                        test_name + "/part1",
@@ -114,9 +102,7 @@ def test_sign_transaction_newaccount_accepted(test_name, firmware, backend, navi
     if firmware.device.startswith("nano"):
         instructions = get_nano_review_instructions(6) + get_nano_review_instructions(8)
     else:
-        instructions = [NavInsID.USE_CASE_REVIEW_TAP] * 3
-        instructions.append(NavInsID.USE_CASE_REVIEW_CONFIRM)
-        instructions += [NavInsID.USE_CASE_REVIEW_TAP] * 3
+        instructions = [NavInsID.USE_CASE_REVIEW_TAP] * 6
         instructions.append(NavInsID.USE_CASE_REVIEW_CONFIRM)
         instructions.append(NavInsID.USE_CASE_STATUS_DISMISS)
     with client.send_async_sign_message_full(messages[1], False):
