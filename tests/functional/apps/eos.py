@@ -1,9 +1,9 @@
 from contextlib import contextmanager
 from enum import IntEnum
-from pycoin.ecdsa.secp256k1 import secp256k1_generator
-from typing import Generator
+from typing import Generator, Optional, Tuple
+from pycoin.ecdsa.secp256k1 import secp256k1_generator  # type: ignore
 
-from bip_utils.addr import EosAddrEncoder
+from bip_utils.addr import EosAddrEncoder  # type: ignore
 
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import hashes
@@ -71,13 +71,13 @@ class EosClient:
     def __init__(self, client):
         self._client = client
 
-    def send_get_app_configuration(self) -> (bool, (int, int, int)):
+    def send_get_app_configuration(self) -> Tuple[bool, Tuple[int, int, int]]:
         rapdu: RAPDU = self._client.exchange(CLA, INS.INS_GET_APP_CONFIGURATION, 0, 0, b"")
         response = rapdu.data
         # response = dataAllowed (1) ||
-        #            LEDGER_MAJOR_VERSION (1) ||
-        #            LEDGER_MINOR_VERSION (1) ||
-        #            LEDGER_PATCH_VERSION (1)
+        #            MAJOR_VERSION (1) ||
+        #            MINOR_VERSION (1) ||
+        #            PATCH_VERSION (1)
         assert len(response) == 4
 
         data_allowed = int(response[0]) == 1
@@ -89,7 +89,7 @@ class EosClient:
     def compute_adress_from_public_key(self, public_key: bytes) -> str:
         return EosAddrEncoder.EncodeKey(public_key)
 
-    def parse_get_public_key_response(self, response: bytes, request_chaincode: bool) -> (bytes, str, bytes):
+    def parse_get_public_key_response(self, response: bytes, request_chaincode: bool) -> Tuple[bytes, str, Optional[bytes]]:
         # response = public_key_len (1) ||
         #            public_key (var) ||
         #            address_len (1) ||
@@ -105,11 +105,10 @@ class EosClient:
         offset += 1
         address: str = response[offset:offset + address_len].decode("ascii")
         offset += address_len
+        chaincode: Optional[bytes] = None
         if request_chaincode:
-            chaincode: bytes = response[offset:offset + 32]
+            chaincode = response[offset:offset + 32]
             offset += 32
-        else:
-            chaincode = None
 
         assert len(response) == offset
         assert len(public_key) == 65
@@ -143,7 +142,7 @@ class EosClient:
         return self._client.exchange(CLA, INS.INS_SIGN_MESSAGE, p1, 0, message)
 
     @contextmanager
-    def _send_async_sign_message(self, message: bytes,
+    def send_async_sign_message_full(self, message: bytes,
                                  first: bool) -> Generator[None, None, None]:
         if first:
             p1 = P1_FIRST
@@ -154,7 +153,7 @@ class EosClient:
 
     def send_async_sign_message(self,
                                 derivation_path: str,
-                                message: bytes) -> Generator[None, None, None]:
+                                message: bytes):
         payload = pack_derivation_path(derivation_path) + message
         messages = split_message(payload, MAX_CHUNK_SIZE)
         first = True
@@ -165,7 +164,7 @@ class EosClient:
                 self._send_sign_message(m, False)
             first = False
 
-        return self._send_async_sign_message(messages[-1], first)
+        return self.send_async_sign_message_full(messages[-1], first)
 
     def get_async_response(self) -> RAPDU:
         return self._client.last_async_response

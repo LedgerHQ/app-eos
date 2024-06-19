@@ -35,7 +35,7 @@ copy ../ref_corpus/* ../corpus/*
 
 Generating coverage:
 
-```
+```shell
 python3 coverage.py
 ```
 

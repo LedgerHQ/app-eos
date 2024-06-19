@@ -22,16 +22,14 @@ typedef struct internalStorage_t {
 } internalStorage_t;
 
 const internalStorage_t N_storage_real;
-#define N_storage (*(volatile internalStorage_t *)PIC(&N_storage_real))
+#define N_storage (*(volatile internalStorage_t *) PIC(&N_storage_real))
 
 void config_init(void) {
-    if (N_storage.initialized != 0x01)
-    {
+    if (N_storage.initialized != 0x01) {
         internalStorage_t storage;
         storage.dataAllowed = 0x00;
         storage.initialized = 0x01;
-        nvm_write((void*)&N_storage, (void *)&storage,
-                  sizeof(internalStorage_t));
+        nvm_write((void *) &N_storage, (void *) &storage, sizeof(internalStorage_t));
     }
 }
 
@@ -41,5 +39,5 @@ bool is_data_allowed(void) {
 
 void toogle_data_allowed(void) {
     uint8_t value = (is_data_allowed() ? 0 : 1);
-    nvm_write((void*)&N_storage.dataAllowed, (void*)&value, sizeof(uint8_t));
+    nvm_write((void *) &N_storage.dataAllowed, (void *) &value, sizeof(uint8_t));
 }

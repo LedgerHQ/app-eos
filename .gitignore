@@ -8,3 +8,4 @@ coverage
 fuzz/corpus/
 fuzz/build/
 tests/functional/snapshots-tmp/
+tests/functional/venv/

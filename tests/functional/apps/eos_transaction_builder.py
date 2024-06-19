@@ -1,15 +1,15 @@
-from asn1 import Encoder, Numbers
-from base58 import b58decode
 from binascii import unhexlify
 from datetime import datetime
 from hashlib import sha256
 from struct import pack
+from asn1 import Encoder, Numbers  # type: ignore
+from base58 import b58decode  # type: ignore
 
 
 def char_to_symbol(c):
-    if c >= 'a' and c <= 'z':
+    if 'a' <= c <= 'z':
         return ord(c) - ord('a') + 6
-    if c >= '1' and c <= '5':
+    if '1' <= c <= '5':
         return ord(c) - ord('1') + 1
     return 0
 
@@ -123,7 +123,6 @@ def encode_auth(data):
 
 class Action:
     def encode(self, data, encoder):
-
         encoder.update(encode_name(data['account']))
         encoder.update(encode_name(data['name']))
         encoder.update(pack('B', len(data['authorization'])))
@@ -132,7 +131,9 @@ class Action:
             encoder.update(encode_name(auth['actor']))
             encoder.update(encode_name(auth['permission']))
 
+        # pylint: disable=no-member
         parameters = self.encode_action_parameters(data['data'])
+        # pylint: enable=no-member
         encoder.update(encode_fc_uint(len(parameters)))
         encoder.update(parameters)
 
@@ -145,8 +146,7 @@ class TransferAction(Action):
         memo = data['memo']
         parameters += encode_fc_uint(len(memo))
         if len(memo) > 0:
-            length = '{}s'.format(len(memo))
-            parameters += pack(length, data['memo'].encode())
+            parameters += pack(f'{len(memo)}s', data['memo'].encode())
 
         return parameters
 
@@ -246,38 +246,36 @@ class UnknownAction(Action):
     def encode_action_parameters(self, data):
         # On purpose dummy and very long action to test the parser behavior
         data = data * 1000
-        length = '{}s'.format(len(data))
-        parameters = pack(length, data.encode())
+        parameters = pack(f'{len(data)}s', data.encode())
         return parameters
 
 
 def instantiate_action(name):
     if name == 'transfer':
         return TransferAction()
-    elif name == 'voteproducer':
+    if name == 'voteproducer':
         return VoteProducerAction()
-    elif name == 'buyram':
+    if name == 'buyram':
         return BuyRamAction()
-    elif name == 'buyrambytes':
+    if name == 'buyrambytes':
         return BuyRamBytesAction()
-    elif name == 'sellram':
+    if name == 'sellram':
         return SellRamAction()
-    elif name == 'updateauth':
+    if name == 'updateauth':
         return UpdateAuthAction()
-    elif name == 'deleteauth':
+    if name == 'deleteauth':
         return DeleteAuthAction()
-    elif name == 'refund':
+    if name == 'refund':
         return RefundAction()
-    elif name == 'linkauth':
+    if name == 'linkauth':
         return LinkAuthAction()
-    elif name == 'unlinkauth':
+    if name == 'unlinkauth':
         return UnlinkAuthAction()
-    elif name == 'newaccount':
+    if name == 'newaccount':
         return NewAccountAction()
-    elif name == 'delegatebw':
+    if name == 'delegatebw':
         return DelegateAction()
-    else:
-        return UnknownAction()
+    return UnknownAction()
 
 
 class TransactionEncoder():
