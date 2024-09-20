@@ -90,7 +90,7 @@ def test_sign_transaction_newaccount_accepted(test_name, firmware, backend, navi
     messages = split_message(payload, MAX_CHUNK_SIZE)
     assert len(messages) == 2
 
-    if firmware.device.startswith("nano"):
+    if firmware.is_nano:
         instructions = get_nano_review_instructions(2) + get_nano_review_instructions(7)
     else:
         instructions = [NavInsID.USE_CASE_REVIEW_TAP] * 5
@@ -99,10 +99,13 @@ def test_sign_transaction_newaccount_accepted(test_name, firmware, backend, navi
                                        test_name + "/part1",
                                        instructions)
 
-    if firmware.device.startswith("nano"):
+    if firmware.is_nano:
         instructions = get_nano_review_instructions(6) + get_nano_review_instructions(8)
     else:
-        instructions = [NavInsID.USE_CASE_REVIEW_TAP] * 6
+        if firmware == Firmware.FLEX:
+            instructions = [NavInsID.USE_CASE_REVIEW_TAP] * 6
+        else:
+            instructions = [NavInsID.USE_CASE_REVIEW_TAP] * 5
         instructions.append(NavInsID.USE_CASE_REVIEW_CONFIRM)
         instructions.append(NavInsID.USE_CASE_STATUS_DISMISS)
     with client.send_async_sign_message_full(messages[1], False):
