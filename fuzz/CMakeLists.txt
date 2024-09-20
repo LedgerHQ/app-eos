@@ -30,6 +30,8 @@ add_compile_definitions(
         HAVE_UX_FLOW
         HAVE_BAGL
         APPVERSION="0.0.0"
+        BAGL_WIDTH=128
+        BAGL_HEIGHT=64
 )
 
 # hack so that core_sc000.h compiles

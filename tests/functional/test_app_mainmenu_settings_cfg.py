@@ -1,13 +1,43 @@
+from typing import List
+from pathlib import Path
+import re
 from ragger.backend import SpeculosBackend
 from ragger.navigator import NavInsID, NavIns
 
 from apps.eos import EosClient
 from utils import ROOT_SCREENSHOT_PATH
 
-# Taken from the Makefile, to update every time the Makefile version is bumped
-MAJOR = 1
-MINOR = 4
-PATCH = 5
+def _read_makefile() -> List[str]:
+    """Read lines from the parent Makefile """
+
+    parent = Path(__file__).parent.parent.parent.resolve()
+    makefile = f"{parent}/Makefile"
+    print(f"Makefile: {makefile}")
+    with open(makefile, "r", encoding="utf-8") as f_p:
+        lines = f_p.readlines()
+    return lines
+
+def _verify_version(version: str) -> None:
+    """Verify the app version, based on defines in Makefile
+
+    Args:
+        Version (str): Version to be checked
+    """
+
+    vers_dict = {}
+    vers_str = (0, 0, 0)
+    lines = _read_makefile()
+    version_re = re.compile(r"^APPVERSION_(?P<part>\w)\s?=\s?(?P<val>\d*)", re.I)
+    for line in lines:
+        info = version_re.match(line)
+        if info:
+            dinfo = info.groupdict()
+            vers_dict[dinfo["part"]] = int(dinfo["val"])
+    try:
+        vers_str = (vers_dict['M'], vers_dict['N'], vers_dict['P'])
+    except KeyError:
+        pass
+    assert version == vers_str
 
 
 def test_app_mainmenu_settings_cfg(firmware, backend, navigator, test_name):
@@ -17,7 +47,7 @@ def test_app_mainmenu_settings_cfg(firmware, backend, navigator, test_name):
     # This works on both the emulator and a physical device
     data_allowed, version = client.send_get_app_configuration()
     assert data_allowed is False
-    assert version == (MAJOR, MINOR, PATCH)
+    _verify_version(version)
 
     # scoping navigation and next test to the emulator
     # navigation instructions are not applied to physical devices
@@ -51,4 +81,4 @@ def test_app_mainmenu_settings_cfg(firmware, backend, navigator, test_name):
         # Check that "data_allowed parameter" changed
         data_allowed, version = client.send_get_app_configuration()
         assert data_allowed is True
-        assert version == (MAJOR, MINOR, PATCH)
+        _verify_version(version)

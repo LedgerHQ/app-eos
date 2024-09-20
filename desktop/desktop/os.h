@@ -24,9 +24,9 @@
 #define FINALLY
 
 #define PRINTF(X) puts(X)
-#define THROW(X) assert(false)
+#define THROW(X)  assert(false)
 
-#define os_memset memset
+#define os_memset  memset
 #define os_memmove memcpy
 
 #endif /* os_h */
