@@ -31,6 +31,7 @@
 #include "config.h"
 #include "ui.h"
 #include "main.h"
+#include "state_neutral.h"
 
 uint32_t get_public_key_and_set_result(void);
 uint32_t sign_hash_and_set_result(void);
@@ -56,6 +57,8 @@ cx_sha256_t dataSha256;
 txProcessingContext_t txProcessingCtx;
 txProcessingContent_t txContent;
 sharedContext_t tmpCtx;
+
+unsigned int countStateNeutralActions;
 
 static void io_exchange_with_code(uint16_t code, uint32_t tx) {
     G_io_apdu_buffer[tx++] = code >> 8;
@@ -99,6 +102,12 @@ void user_action_sign_flow_ok(void) {
         case STREAM_FINISHED:
             io_exchange_with_code(0x9000, sign_hash_and_set_result());
             ui_display_action_sign_done(STREAM_FINISHED, true);
+            break;
+        case STREAM_NOT_ALLOWED:
+            // unknown transaction not allowed
+            io_exchange_with_code(0x6987, 0);
+            // Display back the original UX
+            ui_abort_unknown_action();
             break;
         default:
             io_exchange_with_code(0x6A80, 0);
@@ -193,11 +202,12 @@ uint32_t handleGetAppConfiguration(uint8_t p1,
     UNUSED(workBuffer);
     UNUSED(dataLength);
     UNUSED(flags);
-    G_io_apdu_buffer[0] = (is_data_allowed() ? 0x01 : 0x00);
-    G_io_apdu_buffer[1] = MAJOR_VERSION;
-    G_io_apdu_buffer[2] = MINOR_VERSION;
-    G_io_apdu_buffer[3] = PATCH_VERSION;
-    *tx = 4;
+    G_io_apdu_buffer[0] = (is_unknown_action_allowed() ? 0x01 : 0x00);
+    G_io_apdu_buffer[1] = (is_verbose() ? 0x01 : 0x00);
+    G_io_apdu_buffer[2] = MAJOR_VERSION;
+    G_io_apdu_buffer[3] = MINOR_VERSION;
+    G_io_apdu_buffer[4] = PATCH_VERSION;
+    *tx = 5;
     return SWO_SUCCESS;
 }
 
@@ -298,11 +308,17 @@ uint32_t handleSign(uint8_t p1,
             workBuffer += 4;
             dataLength -= 4;
         }
+
+        // need this state neutral count outside of the mutating txProcessingCtx
+        countStateNeutralActions =
+            preparseTransaction(workBuffer, dataLength, is_verbose() ? 0x01 : 0x00);
         initTxContext(&txProcessingCtx,
                       &sha256,
                       &dataSha256,
                       &txContent,
-                      is_data_allowed() ? 0x01 : 0x00);
+                      is_unknown_action_allowed() ? 0x01 : 0x00,
+                      is_verbose() ? 0x01 : 0x00);
+
     } else if (p1 != P1_MORE) {
         return 0x6B00;
     }
@@ -331,6 +347,10 @@ uint32_t handleSign(uint8_t p1,
             break;
         case STREAM_FAULT:
             return 0x6A80;
+        case STREAM_NOT_ALLOWED:
+            /* unknown transaction not allowed */
+            ui_abort_unknown_action();
+            return 0x6987;
         default:
             PRINTF("Unexpected parser status\n");
             return 0x6A80;

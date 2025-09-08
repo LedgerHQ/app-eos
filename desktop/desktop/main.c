@@ -120,7 +120,7 @@ int main(int argc, const char *argv[]) {
     uint8_t buffer[strlen(tx) / 2];
     hex_to_bytes(tx, strlen(tx), buffer, sizeof(buffer));
 
-    initTxContext(&txProcessingCtx, &sha256, &sha256_arg, &txContent, 1);
+    initTxContext(&txProcessingCtx, &sha256, &sha256_arg, &txContent, 1, 1);
     uint8_t status = parseTx(&txProcessingCtx, buffer, sizeof(buffer));
 
     do {

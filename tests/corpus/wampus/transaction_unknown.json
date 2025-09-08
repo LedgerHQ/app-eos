@@ -1,0 +1,34 @@
+{
+    "chain_id": "cf057bbfb72640471fd910bcb67639c22df9f92470936cddc1ade0e2f2e7dc4f",
+    "transaction": {
+        "expiration": "2025-05-09T21:56:07",
+        "ref_block_num": 35399,
+        "ref_block_prefix": 1434457813,
+        "max_net_usage_words": 0,
+        "max_cpu_usage_ms": 0,
+        "delay_sec": 0,
+        "context_free_actions": [],
+        "actions": [
+            {
+                "account": "wampus",
+                "name": "totalscam1234",
+                "authorization": [
+                    {
+                        "actor": "alicetest123",
+                        "permission": "active"
+                    }
+                ],
+                "data": {
+                    "from": "alicetest123",
+                    "to": "alicetestlio",
+                    "quantity": "10.0000 A",
+                    "memo": "tx2"
+                },
+                "hex_data": "3044c85865855c34405dcc5865855c34a086010000000000044100000000000003747832"
+            }
+        ],
+        "transaction_extensions": [],
+        "signatures": [],
+        "context_free_data": []
+    }
+}

@@ -1,0 +1,10 @@
+{
+  "dependencies": {
+    "@wharfkit/antelope": "^1.0.13",
+    "@wharfkit/session": "^1.6.0",
+    "typescript": "^5.8.3"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.3"
+  }
+}

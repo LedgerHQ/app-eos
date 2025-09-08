@@ -40,4 +40,4 @@ jobs:
           pip install -r tests/functional/requirements.txt
       - name: Mypy type checking
         run: |
-          mypy tests/functional/
+          mypy --config tests/functional/setup.cfg tests/functional/

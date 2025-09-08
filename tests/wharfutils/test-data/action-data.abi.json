@@ -1,0 +1,14 @@
+{
+  "structs": [
+    {
+      "name": "my_struct",
+      "base": "",
+      "fields": [
+        {
+          "name": "foo",
+          "type": "string"
+        }
+      ]
+    }
+  ]
+}

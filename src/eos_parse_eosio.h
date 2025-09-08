@@ -22,6 +22,7 @@
 
 void parseDelegate(uint8_t *buffer, uint32_t bufferLength, uint8_t argNum, actionArgument_t *arg);
 void parseUndelegate(uint8_t *buffer, uint32_t bufferLength, uint8_t argNum, actionArgument_t *arg);
+void parseNoOperation(uint32_t bufferLength, actionArgument_t *arg);
 void parseRefund(uint8_t *buffer, uint32_t bufferLength, uint8_t argNum, actionArgument_t *arg);
 void parseBuyRam(uint8_t *buffer, uint32_t bufferLength, uint8_t argNum, actionArgument_t *arg);
 void parseBuyRamBytes(uint8_t *buffer,

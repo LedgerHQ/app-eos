@@ -1,208 +1,194 @@
-# app-eos
+# Building and Testing EOS application 
 
 Eos wallet application framework for Ledger devices
 
 This follows the specification available in the doc/ folder
 
 To use the generic wallet refer to `signTransaction.py`, `getPublicKey.py`
-or Ledger EOS Wallet application available on Github at [fairy-wallet](https://github.com/tarassh/fairy-wallet)
+or Ledger EOS Wallet application [Anchor](https://www.greymass.com/anchor)
 
 ## Quick start guide
 
-### With VSCode
-
-You can quickly setup a convenient environment to build and test your application by using
-[Ledger's VSCode developer tools extension](https://marketplace.visualstudio.com/items?itemName=LedgerHQ.ledger-dev-tools)
-which leverages the [ledger-app-dev-tools](https://github.com/LedgerHQ/ledger-app-builder/pkgs/container/ledger-app-builder%2Fledger-app-dev-tools)
-docker image.
-
-It will allow you, whether you are developing on macOS, Windows or Linux,
-to quickly **build** your apps, **test** them on **Speculos** and **load** them on any supported device.
-
-- Install and run [Docker](https://www.docker.com/products/docker-desktop/).
-- Make sure you have an X11 server running:
-  - On Ubuntu Linux, it should be running by default.
-  - On macOS, install and launch [XQuartz](https://www.xquartz.org/)
-    (make sure to go to XQuartz > Preferences > Security and check "Allow client connections").
-  - On Windows, install and launch [VcXsrv](https://sourceforge.net/projects/vcxsrv/)
-    (make sure to configure it to disable access control).
-- Install [VScode](https://code.visualstudio.com/download) and add [Ledger's extension](https://marketplace.visualstudio.com/items?itemName=LedgerHQ.ledger-dev-tools).
-- Open a terminal and clone the app with `git clone git@github.com:LedgerHQ/app-eos.git`.
-- Open the `app-eos` folder with VSCode.
-- Use Ledger extension's sidebar menu or open the tasks menu with `ctrl + shift + b`
-  (`command + shift + b` on a Mac) to conveniently execute actions:
-  - Build the app for the device model of your choice with `Build`.
-  - Test your binary on [Speculos](https://github.com/LedgerHQ/speculos) with `Run with Speculos`.
-  - You can also run functional tests, load the app on a physical device, and more.
-
-> The terminal tab of VSCode will show you what commands the extension runs behind the scene.
-
-### With a terminal
+1) First make a new directory 
+```shell
+mkdir ledger-test
+cd ledger-test
+```
 
 The [ledger-app-dev-tools](https://github.com/LedgerHQ/ledger-app-builder/pkgs/container/ledger-app-builder%2Fledger-app-dev-tools)
 docker image contains all the required tools and libraries to **build**, **test** and **load** an application.
 
-You can download it from the ghcr.io docker repository:
+Ledger's general quick start guide to development and [integration with VS Code](https://developers.ledger.com/docs/device-app/beginner/vscode-extension)
+
+2) You can download the development env from the ghcr.io docker repository
 
 ```shell
-sudo docker pull ghcr.io/ledgerhq/ledger-app-builder/ledger-app-dev-tools:latest
+docker pull ghcr.io/ledgerhq/ledger-app-builder/ledger-app-dev-tools:latest
 ```
 
-You can then enter this development environment by executing the following command
-from the directory of the application `git` repository:
-
-#### Linux (Ubuntu)
+3) You can then enter the docker, and the development environment. The eos-application code is mounted from the current working directory. Lets download that as well. Recommend changing to your development branch 
 
 ```shell
-sudo docker run --rm -ti --user "$(id -u):$(id -g)" --privileged -v "/dev/bus/usb:/dev/bus/usb" -v "$(realpath .):/app" ghcr.io/ledgerhq/ledger-app-builder/ledger-app-dev-tools:latest
+git clone https://github.com/eosnetworkfoundation/ledger-app.git
+cd ledger-app
+git checkout develop
 ```
 
-#### macOS
+4) Build per your platform
 
 ```shell
-sudo docker run  --rm -ti --user "$(id -u):$(id -g)" --privileged -v "$(pwd -P):/app" ghcr.io/ledgerhq/ledger-app-builder/ledger-app-dev-tools:latest
+docker run --rm -ti -v "$(realpath .):/app" --user $(id -u $USER):$(id -g $USER) ghcr.io/ledgerhq/ledger-app-builder/ledger-app-builder:latest
+bash-5.1$ cd /app
+bash-5.1$ BOLOS_SDK=$NANOSP_SDK make
 ```
 
-#### Windows (with PowerShell)
+5) Setup Ledger Build Env - required python virtual environment, needed for testing and side loading app onto device
 
 ```shell
-docker run --rm -ti --privileged -v "$(Get-Location):/app" ghcr.io/ledgerhq/ledger-app-builder/ledger-app-dev-tools:latest
+cd /app
+# create python virtual env 
+python3 -m venv private_app_env --system-site-packages
+# activate python virtual env
+source private_app_env/bin/activate  
 ```
 
-The application's code will be available from inside the docker container,
-you can proceed to the following compilation steps to build your app.
+## Testing Via The Emulator 
 
-## Compilation and load
+###  `Linux`
 
-To easily setup a development environment for compilation and loading on a physical device, you can use the [VSCode integration](#with-vscode)
-whether you are on Linux, macOS or Windows.
+```
+cd ledger-app # enter directory for EOS Ledger App
+sudo docker run --rm -ti -v "$(realpath .):/app" --user $(id -u):$(id -g) -v "/tmp/.X11-unix:/tmp/.X11-unix" -e DISPLAY=$DISPLAY ghcr.io/ledgerhq/ledger-app-builder/ledger-app-dev-tools:latest
+cd /app
+source private_app_env/bin/activate
+speculos build/nanosp/bin/app.elf --model nanosp
+```
 
-If you prefer using a terminal to perform the steps manually, you can use the guide below.
+###  `MacOS`
 
-### Compilation
+XQuartz is the official X server implementation for macOS.
 
-Setup a compilation environment by following the [shell with docker approach](#with-a-terminal).
+Download and install XQuartz from:
+👉 https://www.xquartz.org
+After installation, *restart* your computer for changes to take effect. 
+
+#### Setup MacOS
+1) update XQuartz->Settings to allow `network connection`. Shutdown XQuartz
+2) run  `xhost + 127.0.0.1` to allow access XTerm Access 
+3) Start with `open -a XQuartz` 
+
+```
+cd ledger-app # enter directory for EOS Ledger App
+sudo docker run --rm -ti -v "$(pwd -P):/app" --user $(id -u):$(id -g) -v "/tmp/.X11-unix:/tmp/.X11-unix" -e DISPLAY="host.docker.internal:0" ghcr.io/ledgerhq/ledger-app-builder/ledger-app-dev-tools:latest
+cd /app
+python3 -m venv private_app_env --system-site-packages
+source private_app_env/bin/activate
+speculos build/nanos2/bin/app.elf --model nanosp
+```
+
+## Compilation Options
 
 From inside the container, use the following command to build the app:
 
 ```shell
-make DEBUG=1  # compile optionally with PRINTF
+bash-5.1$ cd /app
+bash-5.1$ make DEBUG=1  # compile optionally with PRINTF
 ```
 
 You can choose which device to compile and load for by setting the `BOLOS_SDK` environment variable to the following values:
 
-- `BOLOS_SDK=$NANOS_SDK`
 - `BOLOS_SDK=$NANOX_SDK`
 - `BOLOS_SDK=$NANOSP_SDK`
 - `BOLOS_SDK=$STAX_SDK`
 - `BOLOS_SDK=$FLEX_SDK`
 
+The application's code will be available from inside the docker container,
+you can proceed to the following compilation steps to build your app. To build with [clang static analyzer](https://github.com/LedgerHQ/ledger-app-builder/pkgs/container/ledger-app-builder%2Fledger-app-dev-tools#code-static-analysis) see this example.
+
+```shell
+sudo docker run --user "$(id -u)":"$(id -g)" --rm -ti -v "$(realpath .):/app" ledger-app-builder:latest
+bash-5.1$ make scan-build
+```
+
+## Physical Device 
+
 ### Loading on a physical device
 
 This step will vary slightly depending on your platform.
-
 > Your physical device must be connected, unlocked and the screen showing the dashboard (not inside an application).
 
-#### Linux (Ubuntu)
+1) Download Ledger Live 
+2) [Unlock developer mode and enable developer tools](https://developers.ledger.com/docs/ledger-live/discover/references/developer-mode)
+3) Create a [manifest file](https://developers.ledger.com/docs/ledger-live/discover/references/manifest) for your app 
 
+####  `Linux`
 First make sure you have the proper udev rules added on your host.
 See [udev-rules](https://github.com/LedgerHQ/udev-rules)
 
-Then once you have [opened a terminal](#with-a-terminal) in the `app-builder` image and [built the app](#compilation-and-load)
-for the device you want, run the following command:
-
-```shell
-# Run this command from the app-builder container terminal.
-make load    # load the app on a Nano S by default
+```
+sudo wget -O /etc/udev/rules.d/20-hw1.rules https://raw.githubusercontent.com/LedgerHQ/udev-rules/master/20-hw1.rules
+sudo udevadm control --reload-rules
 ```
 
-[Setting the BOLOS_SDK environment variable](#compilation-and-load) will allow you to load
-on whichever supported device you want.
-
-#### macOS / Windows (with PowerShell)
-
-> It is assumed you have [Python](https://www.python.org/downloads/) installed on your computer.
-
-Run these commands on your host from the app's source folder once you have [built the app](#compilation-and-load)
-for the device you want:
-
-```shell
-# Install Python virtualenv
-python3 -m pip install virtualenv
-# Create the 'ledger' virtualenv
-python3 -m virtualenv ledger
-```
-
-Enter the Python virtual environment
-
-- macOS: `source ledger/bin/activate`
-- Windows: `.\ledger\Scripts\Activate.ps1`
-
-```shell
-# Install Ledgerblue (tool to load the app)
-python3 -m pip install ledgerblue
-# Load the app.
-python3 -m ledgerblue.runScript --scp --fileName bin/app.apdu --elfFile bin/app.elf
-```
-
-## Tests
+## Running Tests
 
 The application comes with functional tests,
 implemented with Ledger's [Ragger](https://github.com/LedgerHQ/ragger) test framework.
 They are located in the directory `tests/functional`.
 
-### Linux (Ubuntu)
-
-On Linux, you can use [Ledger's VS Code extension](#with-vscode) to run the tests.
-If you prefer not to, open a terminal and follow the steps below.
-
 Install the tests requirements:
 
 ```shell
+export PYTHONPATH=/app/private_app_env/lib/python3.11/site-packages
 pip install -r tests/functional/requirements.txt
+pytest tests/functional/ --tb=short -v --device nanosp
 ```
 
-Then you can:
-
-Run the functional tests (here for nanos but available for any device once you have built the binaries):
+You can run emulated tests for a specific device or for all devices. Set `--device` to `all` for all devices.
+Use `--display` to see the emulated UI as the tests are run. The default mode runs the emulator in headless mode.
 
 ```shell
-pytest tests/functional/ --tb=short -v --device nanos
+pytest tests/functional/ -v --tb=short --device=nanosp --display
 ```
 
-Or run your app directly with Speculos
-
+This is a run in headless mode for `nanosp`
 ```shell
-speculos --model nanos build/nanos/bin/app.elf
+pytest tests/functional/ --tb=short -v --device nanosp
 ```
 
-### macOS / Windows
+##  Issues and Solutions
 
-To test your app on macOS or Windows, it is recommended to use [Ledger's VS Code extension](#with-vscode)
-to quickly setup a working test environment.
+#### Error Installing PyQt5
 
-You can use the following sequence of tasks and commands (all accessible in the **extension sidebar menu**):
+Check the site libraries, the library you export should match 
+`python3 -m site`
 
-- `Select build target`
-- `Build app`
-
-Then you can choose to execute the functional tests:
-
-- Use `Run tests`.
-
-Or simply run the app on the Speculos emulator:
-
-- `Run with Speculos`.
-
-## Clang Analyzer
-
-```shell
-sudo docker run --user "$(id -u)":"$(id -g)" --rm -ti -v "$(realpath .):/app" ledger-app-builder:latest
-bash-5.1# make scan-build
+Here are the steps to get around the following error :
 ```
+Collecting PyQt5
+  Downloading PyQt5-5.15.11.tar.gz (3.2 MB)
+     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 3.2/3.2 MB 17.1 MB/s eta 0:00:00
+  Installing build dependencies ... done
+  Getting requirements to build wheel ... done
+  Preparing metadata (pyproject.toml) ... error
+  error: subprocess-exited-with-error
+  
+  × Preparing metadata (pyproject.toml) did not run successfully.
+ ```
+
+You should not need to install PyQt5 as the dependency should already be install with the docker image. Make sure to use the `--system-site-packages` option when creating the python virtual environment. This will use the existing site packages that come with the docker container. Then make sure that the versions of `ragger` and `speculos` match the [Dockerfile](https://github.com/LedgerHQ/ledger-app-builder/blob/master/dev-tools/Dockerfile)
+
+#### `Can't Find Module`
+
+Typically the error will be something like 
+`E   ModuleNotFoundError: No module named 'pycoin'`
+
+## References
 
 Full instructions are on [Ledger Developer Portal](https://developers.ledger.com/docs/device-app/develop/quickstart)
 
 ## Developer Notes
 
-[Setup Tools, Emulator, and Testing](./docs/Ledger-Developer-Notes.md)
+[Links to Documentation and GitHubs related to Ledger Development](./docs/Ledger-Developer-Notes.md)
+
+

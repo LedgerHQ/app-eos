@@ -15,6 +15,7 @@
  *  limitations under the License.
  ********************************************************************************/
 
+#include "os.h"
 #include "eos_parse_token.h"
 #include "eos_types.h"
 

@@ -23,10 +23,10 @@ include $(BOLOS_SDK)/Makefile.defines
 ########################################
 #        Mandatory configuration       #
 ########################################
-APPNAME = Eos
+APPNAME = Vaulta
 
 APPVERSION_M=1
-APPVERSION_N=5
+APPVERSION_N=6
 APPVERSION_P=0
 APPVERSION=$(APPVERSION_M).$(APPVERSION_N).$(APPVERSION_P)
 
@@ -35,11 +35,11 @@ APP_SOURCE_PATH  += src
 
 # Application icons following guidelines:
 # https://developers.ledger.com/docs/embedded-app/design-requirements/#device-icon
-ICON_NANOS = icons/nanos_app_eos.gif
-ICON_NANOX = icons/nano_app_eos.gif
-ICON_NANOSP = icons/nano_app_eos.gif
-ICON_STAX = icons/stax_app_eos.gif
-ICON_FLEX = icons/flex_app_eos.gif
+ICON_NANOS = icons/nanos_app_vaulta.gif
+ICON_NANOX = icons/nano_app_vaulta.gif
+ICON_NANOSP = icons/nano_app_vaulta.gif
+ICON_STAX = icons/stax_app_vaulta.gif
+ICON_FLEX = icons/flex_app_vaulta.gif
 
 # Application allowed derivation curves.
 # Possibles curves are: secp256k1, secp256r1, ed25519 and bls12381g1
@@ -63,7 +63,7 @@ PATH_APP_LOAD_PARAMS = "44'/194'"
 #   * It must at least contains one value.
 #   * Values can be the app ticker or anything else but should be unique.
 VARIANT_PARAM = COIN
-VARIANT_VALUES = eos
+VARIANT_VALUES = valuta
 
 # Enabling DEBUG flag will enable PRINTF and disable optimizations
 #DEBUG = 1

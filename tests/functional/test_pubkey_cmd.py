@@ -7,7 +7,7 @@ from ragger.navigator.navigation_scenario import NavigateWithScenario
 from apps.eos import EosClient, ErrorType
 
 # Proposed EOS derivation paths for tests ###
-EOS_PATH = "m/44'/194'/12345'"
+VAULTA_PATH = "m/44'/194'/12345'"
 
 
 def check_get_public_key_resp(backend, path, public_key, chaincode):
@@ -21,12 +21,12 @@ def check_get_public_key_resp(backend, path, public_key, chaincode):
 def test_get_public_key_non_confirm(backend):
     client = EosClient(backend)
 
-    rapdu = client.send_get_public_key_non_confirm(EOS_PATH, True)
+    rapdu = client.send_get_public_key_non_confirm(VAULTA_PATH, True)
     public_key, address, chaincode = client.parse_get_public_key_response(rapdu.data, True)
-    check_get_public_key_resp(backend, EOS_PATH, public_key, chaincode)
+    check_get_public_key_resp(backend, VAULTA_PATH, public_key, chaincode)
 
     # Check that with NO_CHAINCODE, value stay the same
-    rapdu = client.send_get_public_key_non_confirm(EOS_PATH, False)
+    rapdu = client.send_get_public_key_non_confirm(VAULTA_PATH, False)
     public_key_2, address_2, chaincode_2 = client.parse_get_public_key_response(rapdu.data, False)
     assert public_key_2 == public_key
     assert address_2 == address
@@ -35,15 +35,15 @@ def test_get_public_key_non_confirm(backend):
 
 def test_get_public_key_confirm_accepted(backend: BackendInterface, scenario_navigator: NavigateWithScenario):
     client = EosClient(backend)
-    with client.send_async_get_public_key_confirm(EOS_PATH, True):
+    with client.send_async_get_public_key_confirm(VAULTA_PATH, True):
         scenario_navigator.address_review_approve()
 
     response = client.get_async_response().data
     public_key, address, chaincode = client.parse_get_public_key_response(response, True)
-    check_get_public_key_resp(backend, EOS_PATH, public_key, chaincode)
+    check_get_public_key_resp(backend, VAULTA_PATH, public_key, chaincode)
 
     # Check that with NO_CHAINCODE, value and screens stay the same
-    with client.send_async_get_public_key_confirm(EOS_PATH, False):
+    with client.send_async_get_public_key_confirm(VAULTA_PATH, False):
         scenario_navigator.address_review_approve()
 
     response = client.get_async_response().data
@@ -58,7 +58,7 @@ def test_get_public_key_confirm_refused(backend: BackendInterface, scenario_navi
     client = EosClient(backend)
     backend.raise_policy = RaisePolicy.RAISE_NOTHING
     for chaincode_param in [True, False]:
-        with client.send_async_get_public_key_confirm(EOS_PATH, chaincode_param):
+        with client.send_async_get_public_key_confirm(VAULTA_PATH, chaincode_param):
             scenario_navigator.address_review_reject()
         rapdu = client.get_async_response()
         assert rapdu.status == ErrorType.USER_CANCEL

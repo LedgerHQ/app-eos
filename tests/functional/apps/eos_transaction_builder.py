@@ -111,16 +111,16 @@ def encode_auth(data):
         parameters += pack('H', key['weight'])
     parameters += pack('B', len(data['accounts']))
     for account in data['accounts']:
-        parameters += encode_name(account['authorization']['actor'])
-        parameters += encode_name(account['authorization']['permission'])
+        parameters += encode_name(account['permission']['actor'])
+        parameters += encode_name(account['permission']['permission'])
         parameters += pack('H', account['weight'])
     parameters += pack('B', len(data['waits']))
     for wait in data['waits']:
-        parameters += pack('I', wait['wait'])
+        parameters += pack('I', wait['wait_sec'])
         parameters += pack('H', wait['weight'])
     return parameters
 
-
+# pylint: disable=no-member
 class Action:
     def encode(self, data, encoder):
         encoder.update(encode_name(data['account']))
@@ -131,12 +131,22 @@ class Action:
             encoder.update(encode_name(auth['actor']))
             encoder.update(encode_name(auth['permission']))
 
-        # pylint: disable=no-member
-        parameters = self.encode_action_parameters(data['data'])
-        # pylint: enable=no-member
-        encoder.update(encode_fc_uint(len(parameters)))
-        encoder.update(parameters)
+        # if hex encoded data is already provided use that
+        # otherwise create hex code from the provided JSON
+        if 'hex_data' in data and data['hex_data']:
+            parameters = unhexlify(data['hex_data'])
+        else:
+            parameters = self.encode_action_parameters(data['data'])
+        if parameters is None:
+            parameters = encoder.update(encode_fc_uint(len(b'')))
+            encoder.update(b'')
+        else:
+            encoder.update(encode_fc_uint(len(parameters)))
+            encoder.update(parameters)
 
+class NoOp(Action):
+    def encode_action_parameters(self, data):  # pylint: disable=unused-argument
+        return None
 
 class TransferAction(Action):
     def encode_action_parameters(self, data):
@@ -150,10 +160,12 @@ class TransferAction(Action):
 
         return parameters
 
+class SwapToAction(TransferAction):
+    pass
 
 class VoteProducerAction(Action):
     def encode_action_parameters(self, data):
-        parameters = encode_name(data['account'])
+        parameters = encode_name(data['voter'])
         parameters += encode_name(data['proxy'])
         parameters += encode_fc_uint(len(data['producers']))
         for producer in data['producers']:
@@ -164,15 +176,14 @@ class VoteProducerAction(Action):
 
 class BuyRamAction(Action):
     def encode_action_parameters(self, data):
-        parameters = encode_name(data['buyer'])
+        parameters = encode_name(data['payer'])
         parameters += encode_name(data['receiver'])
-        parameters += encode_asset(data['tokens'])
+        parameters += encode_asset(data['quant'])
         return parameters
-
 
 class BuyRamBytesAction(Action):
     def encode_action_parameters(self, data):
-        parameters = encode_name(data['buyer'])
+        parameters = encode_name(data['payer'])
         parameters += encode_name(data['receiver'])
         parameters += pack('I', data['bytes'])
         return parameters
@@ -180,7 +191,7 @@ class BuyRamBytesAction(Action):
 
 class SellRamAction(Action):
     def encode_action_parameters(self, data):
-        parameters = encode_name(data['receiver'])
+        parameters = encode_name(data['account'])
         parameters += pack('Q', data['bytes'])
         return parameters
 
@@ -203,30 +214,30 @@ class DeleteAuthAction(Action):
 
 class RefundAction(Action):
     def encode_action_parameters(self, data):
-        return encode_name(data['account'])
+        return encode_name(data['owner'])
 
 
 class LinkAuthAction(Action):
     def encode_action_parameters(self, data):
         parameters = encode_name(data['account'])
-        parameters += encode_name(data['contract'])
-        parameters += encode_name(data['action'])
-        parameters += encode_name(data['permission'])
+        parameters += encode_name(data['code'])
+        parameters += encode_name(data['type'])
+        parameters += encode_name(data['requirement'])
         return parameters
 
 
 class UnlinkAuthAction(Action):
     def encode_action_parameters(self, data):
         parameters = encode_name(data['account'])
-        parameters += encode_name(data['contract'])
-        parameters += encode_name(data['action'])
+        parameters += encode_name(data['code'])
+        parameters += encode_name(data['type'])
         return parameters
 
 
 class NewAccountAction(Action):
     def encode_action_parameters(self, data):
         parameters = encode_name(data['creator'])
-        parameters += encode_name(data['newact'])
+        parameters += encode_name(data['name'])
         parameters += encode_auth(data['owner'])
         parameters += encode_auth(data['active'])
         return parameters
@@ -235,7 +246,7 @@ class NewAccountAction(Action):
 class DelegateAction(Action):
     def encode_action_parameters(self, data):
         parameters = encode_name(data['from'])
-        parameters += encode_name(data['to'])
+        parameters += encode_name(data['receiver'])
         parameters += encode_asset(data['stake_net_quantity'])
         parameters += encode_asset(data['stake_cpu_quantity'])
         parameters += bytes([0x01]) if data['transfer'] else bytes([0x00])
@@ -243,16 +254,16 @@ class DelegateAction(Action):
 
 
 class UnknownAction(Action):
+    # requires hex_data unable to parse unknown
     def encode_action_parameters(self, data):
-        # On purpose dummy and very long action to test the parser behavior
-        data = data * 1000
-        parameters = pack(f'{len(data)}s', data.encode())
-        return parameters
+        pass
 
 
 def instantiate_action(name):
     if name == 'transfer':
         return TransferAction()
+    if name == 'swapto':
+        return SwapToAction()
     if name == 'voteproducer':
         return VoteProducerAction()
     if name == 'buyram':
@@ -275,6 +286,8 @@ def instantiate_action(name):
         return NewAccountAction()
     if name == 'delegatebw':
         return DelegateAction()
+    if name == 'noop':
+        return NoOp()
     return UnknownAction()
 
 
@@ -300,7 +313,6 @@ class TransactionEncoder():
 
 
 class Transaction():
-
     def encode(self, json):
         encoder = TransactionEncoder()
         encoder.start()
@@ -314,7 +326,7 @@ class Transaction():
         encoder.update(pack('I', expiration))
         encoder.update(pack('H', body['ref_block_num']))
         encoder.update(pack('I', body['ref_block_prefix']))
-        encoder.update(pack('B', body['net_usage_words']))
+        encoder.update(pack('B', body['max_net_usage_words']))
         encoder.update(pack('B', body['max_cpu_usage_ms']))
         encoder.update(pack('B', body['delay_sec']))
 

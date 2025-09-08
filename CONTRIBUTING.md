@@ -10,7 +10,7 @@ Step 5 is optional. It helps avoid submitting broken PRs.
 2. Create a branch for your work
 3. Make your changes. Don't forget to update app version in `Makefile`
 4. Check your changes by running [`make scan-build`](./README.md#clang-analyzer)
-5. [Run tests](docs/running-tests.md)
+5. [Run tests](./README.md##testing-via-the-emulator)
 6. Create a PR to merge the changes from your Branch `#2` into `main`
 
 ## ENF Steps

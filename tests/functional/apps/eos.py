@@ -71,20 +71,22 @@ class EosClient:
     def __init__(self, client):
         self._client = client
 
-    def send_get_app_configuration(self) -> Tuple[bool, Tuple[int, int, int]]:
+    def send_get_app_configuration(self) -> Tuple[bool, bool, Tuple[int, int, int]]:
         rapdu: RAPDU = self._client.exchange(CLA, INS.INS_GET_APP_CONFIGURATION, 0, 0, b"")
         response = rapdu.data
-        # response = dataAllowed (1) ||
+        # response = unknownActionAllowed (1) ||
+        #.           verbose (1)       ||
         #            MAJOR_VERSION (1) ||
         #            MINOR_VERSION (1) ||
         #            PATCH_VERSION (1)
-        assert len(response) == 4
+        assert len(response) == 5
 
         data_allowed = int(response[0]) == 1
-        major = int(response[1])
-        minor = int(response[2])
-        patch = int(response[3])
-        return data_allowed, (major, minor, patch)
+        is_verbose = int(response[1]) == 1
+        major = int(response[2])
+        minor = int(response[3])
+        patch = int(response[4])
+        return data_allowed, is_verbose, (major, minor, patch)
 
     def compute_adress_from_public_key(self, public_key: bytes) -> str:
         return EosAddrEncoder.EncodeKey(public_key)
@@ -177,7 +179,7 @@ class EosClient:
         assert signature[33] != 0 or (signature[34] & 0x80) != 0
 
     def verify_signature(self, derivation_path: str,
-                         signing_digest: bytes, signature: bytes) -> None:
+                         signing_digest: bytes, signature: bytes, skipStatusCheck=False) -> None:
         assert len(signature) == 65
         self.check_canonical(signature)
 
@@ -196,7 +198,8 @@ class EosClient:
 
         # Also retrieve public key from INS_GET_PUBLIC_KEY for comparison
         rapdu = self.send_get_public_key_non_confirm(derivation_path, False)
-        assert rapdu.status == STATUS_OK
+        if not skipStatusCheck:
+            assert rapdu.status == STATUS_OK
         public_key_bytes, _, _ = self.parse_get_public_key_response(rapdu.data, False)
 
         # Check that both public key matches

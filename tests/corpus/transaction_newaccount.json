@@ -4,7 +4,7 @@
     "expiration": "2018-07-14T10:43:28",
     "ref_block_num": 6439,
     "ref_block_prefix": 2995713264,
-    "net_usage_words": 0,
+    "max_net_usage_words": 0,
     "max_cpu_usage_ms": 0,
     "delay_sec": 0,
     "context_free_actions": [],
@@ -20,7 +20,7 @@
         ],
         "data": {
           "creator": "cryptofairy1",
-          "newact": "bobmarley",
+          "name": "bobmarley",
           "owner": {
             "threshold": 1,
             "keys": [
@@ -55,7 +55,7 @@
           }
         ],
         "data": {
-          "buyer": "cryptofairy1",
+          "payer": "cryptofairy1",
           "receiver": "bobmarley",
           "bytes": 4096
         }
@@ -71,7 +71,7 @@
         ],
         "data": {
           "from": "cryptofairy1",
-          "to": "bobmarley",
+          "receiver": "bobmarley",
           "stake_net_quantity": "1.0000 EOS",
           "stake_cpu_quantity": "0.5000 EOS",
           "transfer": true

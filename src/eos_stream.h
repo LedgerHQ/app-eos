@@ -25,6 +25,7 @@
 #include "eos_parse.h"
 
 typedef struct txProcessingContent_t {
+    uint8_t noData;
     char argumentCount;
     char contract[14];
     char action[14];
@@ -64,6 +65,8 @@ typedef struct txProcessingContext_t {
     uint32_t currentFieldPos;
     uint32_t currentAutorizationIndex;
     uint32_t currentAutorizationNumber;
+    char currentAuthorizationName[14];
+    char currentAuthorizationPermission[14];
     uint32_t currentActionIndex;
     uint32_t currentActionNumber;
     uint32_t currentActionDataBufferLength;
@@ -76,7 +79,8 @@ typedef struct txProcessingContext_t {
     name_t contractActionName;
     uint8_t sizeBuffer[12];
     uint8_t actionDataBuffer[512];
-    uint8_t dataAllowed;
+    uint8_t unknownActionAllowed;
+    uint8_t isVerbose;
     checksum256 dataChecksum;
     txProcessingContent_t *content;
 } txProcessingContext_t;
@@ -87,13 +91,20 @@ typedef enum parserStatus_e {
     STREAM_ACTION_READY,
     STREAM_CONFIRM_PROCESSING,
     STREAM_FINISHED,
+    STREAM_NOT_ALLOWED
 } parserStatus_e;
 
 void initTxContext(txProcessingContext_t *context,
                    cx_sha256_t *sha256,
                    cx_sha256_t *dataSha256,
                    txProcessingContent_t *processingContent,
-                   uint8_t dataAllowed);
+                   uint8_t unknownActionAllowed,
+                   uint8_t isVerbose);
+
+unsigned int preparseTransaction(uint8_t *workBuffer, uint16_t scratchLength, uint8_t verbose);
+
+static inline bool isStateNeutralAction(const char *contract, const char *action, uint8_t noData);
+
 parserStatus_e parseTx(txProcessingContext_t *context, uint8_t *buffer, uint32_t length);
 
 void printArgument(uint8_t argNum, txProcessingContext_t *processingContext);

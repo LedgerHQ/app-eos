@@ -1,0 +1,31 @@
+{
+    "chain_id": "cf057bbfb72640471fd910bcb67639c22df9f92470936cddc1ade0e2f2e7dc4f",
+    "transaction": {
+  "expiration": "2025-05-12T17:42:46",
+  "ref_block_num": 64646,
+  "ref_block_prefix": 250416169,
+  "max_net_usage_words": 0,
+  "max_cpu_usage_ms": 0,
+  "delay_sec": 0,
+  "context_free_actions": [],
+  "actions": [{
+      "account": "core.vaulta",
+      "name": "buyrambytes",
+      "authorization": [{
+          "actor": "alicetest123",
+          "permission": "active"
+        }
+      ],
+      "data": {
+        "payer": "alicetest123",
+        "receiver": "alicetest123",
+        "bytes": 1023
+      },
+      "hex_data": "3044c85865855c343044c85865855c34ff030000"
+    }
+  ],
+  "transaction_extensions": [],
+  "signatures": [],
+  "context_free_data": []
+    }
+  }

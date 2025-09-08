@@ -25,7 +25,7 @@ void parseUnknownAction(uint8_t *buffer,
                         uint8_t argNum,
                         actionArgument_t *arg) {
     if (argNum == 0) {
-        printString("Arbitrary Data", "WARNING", arg);
+        printString("Unknown Action", "WARNING", arg);
     } else if (argNum == 1) {
         printString("Verify checksum", "WARNING", arg);
     } else if (argNum == 2) {

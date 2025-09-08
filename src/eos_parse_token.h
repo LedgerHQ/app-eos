@@ -18,6 +18,7 @@
 #ifndef __EOS_PARSE_TOKEN_H__
 #define __EOS_PARSE_TOKEN_H__
 
+#include "os.h"
 #include "eos_parse.h"
 
 void parseTokenTransfer(uint8_t *buffer,

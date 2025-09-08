@@ -1,3 +1,5 @@
+.roo
+1
 bin
 debug
 build
@@ -9,3 +11,7 @@ fuzz/corpus/
 fuzz/build/
 tests/functional/snapshots-tmp/
 tests/functional/venv/
+private_app_env
+node_modules
+serialize.js
+.DS_Store
