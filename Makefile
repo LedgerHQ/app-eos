@@ -18,7 +18,8 @@
 ifeq ($(BOLOS_SDK),)
 $(error Environment variable BOLOS_SDK is not set)
 endif
-include $(BOLOS_SDK)/Makefile.defines
+
+include $(BOLOS_SDK)/Makefile.target
 
 ########################################
 #        Mandatory configuration       #
@@ -39,6 +40,15 @@ ICON_NANOX = icons/nano_app_eos.gif
 ICON_NANOSP = icons/nano_app_eos.gif
 ICON_STAX = icons/stax_app_eos.gif
 ICON_FLEX = icons/flex_app_eos.gif
+ICON_APEX = icons/apex_app_eos.gif
+
+ifeq ($(TARGET_NAME),$(filter $(TARGET_NAME),TARGET_NANOX TARGET_NANOS2))
+    # With the Nano NBGL Design, the Home Screen icon is the reverse of the App icon:
+    # It should be on white background, with rounded corners.
+    # This definition allows SDK Makefiles to automatically generate it based on the App icon.
+    # Please note that the icon is dynamically generated, and declared in the .gitignore to avoid storing it.
+    ICON_HOME_NANO = glyphs/home_app_eos.gif
+endif
 
 # Application allowed derivation curves.
 # Possibles curves are: secp256k1, secp256r1, ed25519 and bls12381g1
@@ -89,6 +99,7 @@ ENABLE_BLUETOOTH = 1
 ENABLE_NBGL_QRCODE = 1
 #ENABLE_NBGL_KEYBOARD = 1
 #ENABLE_NBGL_KEYPAD = 1
+ENABLE_NBGL_FOR_NANO_DEVICES = 1
 
 ########################################
 #          Features disablers          #

@@ -1,6 +1,6 @@
 # app-eos
 
-Eos wallet application framework for Ledger devices
+Eos wallet application framework for Ledger devices (Nano S Plus, Nano X, Flex, Stax, Apex)
 
 This follows the specification available in the doc/ folder
 
@@ -95,6 +95,7 @@ You can choose which device to compile and load for by setting the `BOLOS_SDK` e
 - `BOLOS_SDK=$NANOSP_SDK`
 - `BOLOS_SDK=$STAX_SDK`
 - `BOLOS_SDK=$FLEX_SDK`
+- `BOLOS_SDK=$APEX_P_SDK`
 
 ### Loading on a physical device
 

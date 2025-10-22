@@ -9,3 +9,6 @@ fuzz/corpus/
 fuzz/build/
 tests/functional/snapshots-tmp/
 tests/functional/venv/
+
+# Nano NBGL reversed icon for Home Screen
+glyphs/home_app_eos.gif
