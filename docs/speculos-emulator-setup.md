@@ -9,7 +9,7 @@ pip install speculos
 ## Run and use the emulator
 
 ```shell
-./speculos.py build/nanos/bin/app.elf
+./speculos.py build/nanosp/bin/app.elf
 ```
 
 > You can go to `http://127.0.0.1:5000/` for another interface and more data
