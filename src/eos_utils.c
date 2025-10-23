@@ -20,6 +20,10 @@
 #include "os.h"
 #include "cx.h"
 
+#define MAX_BIN_SIZE \
+    37  // Adjust as needed (current value enough for b58enc usage in compressed_public_key_to_wif)
+#define MAX_BUF_SIZE MAX_BIN_SIZE * 138 / 100 + 1  // 52
+
 unsigned char const BASE58ALPHABET[] = {'1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C',
                                         'D', 'E', 'F', 'G', 'H', 'J', 'K', 'L', 'M', 'N', 'P', 'Q',
                                         'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z', 'a', 'b', 'c',
@@ -34,7 +38,8 @@ bool b58enc(uint8_t *bin, uint32_t binsz, char *b58, uint32_t *b58sz) {
     while (zcount < binsz && !bin[zcount]) ++zcount;
 
     size = (binsz - zcount) * 138 / 100 + 1;
-    uint8_t buf[size];
+    LEDGER_ASSERT(size <= MAX_BUF_SIZE, "b58enc overflow : input bin too large");
+    uint8_t buf[MAX_BUF_SIZE];
     memset(buf, 0, size);
 
     for (i = zcount, high = size - 1; i < binsz; ++i, high = j) {

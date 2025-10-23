@@ -1,9 +1,9 @@
-from typing import List
+from typing import List, Tuple
 from pathlib import Path
 import re
 from ragger.backend import SpeculosBackend
 from ragger.navigator import NavInsID, NavIns
-from ledgered.devices import Device, DeviceType
+from ledgered.devices import Device, DeviceType # type: ignore[import]
 
 from apps.eos import EosClient
 from utils import ROOT_SCREENSHOT_PATH
@@ -18,7 +18,7 @@ def _read_makefile() -> List[str]:
         lines = f_p.readlines()
     return lines
 
-def _verify_version(version: str) -> None:
+def _verify_version(version: Tuple[int, int, int]) -> None:
     """Verify the app version, based on defines in Makefile
 
     Args:
@@ -57,6 +57,7 @@ def test_app_mainmenu_settings_cfg(device: Device, backend, navigator, test_name
     if isinstance(backend, SpeculosBackend):
         # Navigate in the main menu and the setting menu
         # Change the "data_allowed parameter" value
+        instructions: List[NavInsID | NavIns]
         if device.is_nano:
             instructions = [
                 NavInsID.RIGHT_CLICK,

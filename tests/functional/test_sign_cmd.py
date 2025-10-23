@@ -7,7 +7,7 @@ from ragger.navigator import NavInsID
 from ragger.utils import split_message
 from ragger.backend import BackendInterface
 from ragger.navigator.navigation_scenario import NavigateWithScenario
-from ledgered.devices import Device, DeviceType
+from ledgered.devices import Device, DeviceType # type: ignore[import]
 
 from apps.eos import EosClient, ErrorType, MAX_CHUNK_SIZE
 from apps.eos_transaction_builder import Transaction

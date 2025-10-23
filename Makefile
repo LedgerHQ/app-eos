@@ -40,7 +40,7 @@ ICON_NANOX = icons/nano_app_eos.gif
 ICON_NANOSP = icons/nano_app_eos.gif
 ICON_STAX = icons/stax_app_eos.gif
 ICON_FLEX = icons/flex_app_eos.gif
-ICON_APEX = icons/apex_app_eos.gif
+ICON_APEX_P = icons/apex_app_eos.png
 
 ifeq ($(TARGET_NAME),$(filter $(TARGET_NAME),TARGET_NANOX TARGET_NANOS2))
     # With the Nano NBGL Design, the Home Screen icon is the reverse of the App icon:
