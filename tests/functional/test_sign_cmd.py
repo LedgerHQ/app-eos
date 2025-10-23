@@ -31,7 +31,6 @@ transactions.remove("transaction_unknown.json")
 
 @pytest.mark.parametrize("transaction_filename", transactions)
 def test_sign_transaction_accepted(test_name: str,
-                                   device: Device,
                                    backend: BackendInterface,
                                    scenario_navigator: NavigateWithScenario,
                                    transaction_filename: str):
@@ -39,12 +38,8 @@ def test_sign_transaction_accepted(test_name: str,
 
     signing_digest, message = load_transaction_from_file(transaction_filename)
     client = EosClient(backend)
-    if device.is_nano:
-        end_text = "Sign"
-    else:
-        end_text = "^Hold to sign$"
     with client.send_async_sign_message(EOS_PATH, message):
-        scenario_navigator.review_approve(test_name=folder_name, custom_screen_text=end_text)
+        scenario_navigator.review_approve(test_name=folder_name)
     response = client.get_async_response().data
     client.verify_signature(EOS_PATH, signing_digest, response)
 
@@ -57,9 +52,8 @@ def test_sign_transaction_refused(test_name: str,
     client = EosClient(backend)
     backend.raise_policy = RaisePolicy.RAISE_NOTHING
     if device.is_nano:
-        end_text = "Reject"
         with client.send_async_sign_message(EOS_PATH, message):
-            scenario_navigator.review_reject(test_name=test_name, custom_screen_text=end_text)
+            scenario_navigator.review_reject(test_name=test_name)
         rapdu = client.get_async_response()
         assert rapdu.status == ErrorType.USER_CANCEL
         assert len(rapdu.data) == 0
@@ -92,7 +86,6 @@ def test_sign_transaction_newaccount_accepted(test_name, device: Device, backend
 
     if device.is_nano:
         instructions = [NavInsID.RIGHT_CLICK] * 11
-        # instructions = get_nano_review_instructions(11)# + get_nano_review_instructions(7)
     else:
         instructions = [NavInsID.USE_CASE_REVIEW_TAP] * 4
     with client.send_async_sign_message_full(messages[0], True):
@@ -123,13 +116,13 @@ def test_sign_transaction_newaccount_accepted(test_name, device: Device, backend
 # fully contained in the first APDU before answering to it.
 # Therefore we can't use the simple send_async_sign_message() method and we
 # need to do thing more manually.
-def test_sign_transaction_unknown_fail(test_name, firmware, backend, navigator):
+def test_sign_transaction_unknown_fail(test_name, device: Device, backend, navigator):
     _, message = load_transaction_from_file("transaction_unknown.json")
     client = EosClient(backend)
     payload = pack_derivation_path(EOS_PATH) + message
     messages = split_message(payload, MAX_CHUNK_SIZE)
 
-    if firmware.device.startswith("nano"):
+    if device.is_nano:
         instructions = get_nano_review_instructions(2)
     else:
         instructions = [NavInsID.USE_CASE_REVIEW_TAP]
