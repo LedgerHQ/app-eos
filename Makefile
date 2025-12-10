@@ -18,7 +18,8 @@
 ifeq ($(BOLOS_SDK),)
 $(error Environment variable BOLOS_SDK is not set)
 endif
-include $(BOLOS_SDK)/Makefile.defines
+
+include $(BOLOS_SDK)/Makefile.target
 
 ########################################
 #        Mandatory configuration       #
@@ -26,7 +27,7 @@ include $(BOLOS_SDK)/Makefile.defines
 APPNAME = Eos
 
 APPVERSION_M=1
-APPVERSION_N=5
+APPVERSION_N=6
 APPVERSION_P=0
 APPVERSION=$(APPVERSION_M).$(APPVERSION_N).$(APPVERSION_P)
 
@@ -35,11 +36,11 @@ APP_SOURCE_PATH  += src
 
 # Application icons following guidelines:
 # https://developers.ledger.com/docs/embedded-app/design-requirements/#device-icon
-ICON_NANOS = icons/nanos_app_eos.gif
 ICON_NANOX = icons/nano_app_eos.gif
 ICON_NANOSP = icons/nano_app_eos.gif
 ICON_STAX = icons/stax_app_eos.gif
 ICON_FLEX = icons/flex_app_eos.gif
+ICON_APEX_P = icons/apex_app_eos.png
 
 # Application allowed derivation curves.
 # Possibles curves are: secp256k1, secp256r1, ed25519 and bls12381g1
@@ -90,6 +91,7 @@ ENABLE_BLUETOOTH = 1
 ENABLE_NBGL_QRCODE = 1
 #ENABLE_NBGL_KEYBOARD = 1
 #ENABLE_NBGL_KEYPAD = 1
+ENABLE_NBGL_FOR_NANO_DEVICES = 1
 
 ########################################
 #          Features disablers          #

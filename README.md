@@ -1,6 +1,6 @@
 # app-eos
 
-Eos wallet application framework for Ledger devices
+Eos wallet application framework for Ledger devices (Nano S Plus, Nano X, Flex, Stax, Apex)
 
 This follows the specification available in the doc/ folder
 
@@ -91,11 +91,11 @@ make DEBUG=1  # compile optionally with PRINTF
 
 You can choose which device to compile and load for by setting the `BOLOS_SDK` environment variable to the following values:
 
-- `BOLOS_SDK=$NANOS_SDK`
 - `BOLOS_SDK=$NANOX_SDK`
 - `BOLOS_SDK=$NANOSP_SDK`
 - `BOLOS_SDK=$STAX_SDK`
 - `BOLOS_SDK=$FLEX_SDK`
+- `BOLOS_SDK=$APEX_P_SDK`
 
 ### Loading on a physical device
 
@@ -164,16 +164,16 @@ pip install -r tests/functional/requirements.txt
 
 Then you can:
 
-Run the functional tests (here for nanos but available for any device once you have built the binaries):
+Run the functional tests (here for nanosp but available for any device once you have built the binaries):
 
 ```shell
-pytest tests/functional/ --tb=short -v --device nanos
+pytest tests/functional/ --tb=short -v --device nanosp
 ```
 
 Or run your app directly with Speculos
 
 ```shell
-speculos --model nanos build/nanos/bin/app.elf
+speculos --model nanosp build/nanosp/bin/app.elf
 ```
 
 ### macOS / Windows

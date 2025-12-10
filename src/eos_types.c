@@ -23,6 +23,8 @@
 #include <stdbool.h>
 #include "string.h"
 
+#define MAX_SYMBOL_PRECISION 0xff
+
 static const char *charmap = ".12345abcdefghijklmnopqrstuvwxyz";
 
 name_t buffer_to_name_type(uint8_t *in, uint32_t size) {
@@ -120,7 +122,7 @@ uint8_t asset_to_string(asset_t *asset, char *out, uint32_t size) {
 
     p = (int64_t) symbol_precision(asset->symbol);
 
-    char fraction[p + 1];
+    char fraction[MAX_SYMBOL_PRECISION + 1];
     fraction[p] = 0;
     int64_t change = asset->amount % p10;
 
